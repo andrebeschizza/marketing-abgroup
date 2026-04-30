@@ -1,0 +1,931 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+  <meta name="theme-color" content="#FFFFFF">
+  <title>Marketing AB Group</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%231B9C85'/%3E%3Ctext x='16' y='22' font-family='Arial' font-size='16' font-weight='800' fill='white' text-anchor='middle'%3EAB%3C/text%3E%3C/svg%3E">
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #FAFAF8;
+      --bg-card: #FFFFFF;
+      --bg-subtle: #F5F5F2;
+      --border: #EAEAE5;
+      --border-strong: #D4D4CF;
+      --ink: #0A0A0A;
+      --ink-2: #2A2A2A;
+      --ink-soft: #525252;
+      --ink-mute: #8B8B85;
+      --accent: #1B9C85;
+      --accent-soft: #E6F4F0;
+      --accent-deep: #0F7A66;
+      --warning: #B45309;
+      --warning-soft: #FEF3C7;
+      --danger: #B91C1C;
+      --danger-soft: #FEE2E2;
+      --r-sm: 6px;
+      --r-md: 10px;
+      --r-lg: 14px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: 14px; -webkit-text-size-adjust: 100%; }
+    body {
+      background: var(--bg);
+      color: var(--ink);
+      font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', system-ui, sans-serif;
+      font-size: 14px; line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+      letter-spacing: -0.005em;
+    }
+    a { color: inherit; text-decoration: none; }
+    button { font-family: inherit; cursor: pointer; }
+
+    /* TOPBAR */
+    .topbar {
+      background: var(--bg-card);
+      border-bottom: 1px solid var(--border);
+      position: sticky; top: 0; z-index: 50;
+      backdrop-filter: saturate(180%) blur(8px);
+    }
+    .topbar-inner {
+      max-width: 1280px; margin: 0 auto;
+      padding: 12px 20px;
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    }
+    .brand { display: flex; align-items: center; gap: 10px; }
+    .brand-mark {
+      width: 22px; height: 22px;
+      background: var(--accent); border-radius: 6px;
+      display: inline-flex; align-items: center; justify-content: center;
+      color: white; font-weight: 800; font-size: 10px; letter-spacing: 0.04em;
+    }
+    .brand-text { font-size: 13px; font-weight: 600; letter-spacing: -0.01em; }
+    .brand-text small { color: var(--ink-mute); font-weight: 500; margin-left: 6px; }
+    .topbar-meta {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 12px; color: var(--ink-mute);
+    }
+    .meta-time { display: none; }
+    @media (min-width: 768px) { .meta-time { display: inline; } }
+    .logout {
+      font-size: 12px; color: var(--ink-soft);
+      padding: 5px 10px; border-radius: 6px;
+      border: 1px solid var(--border); background: transparent;
+    }
+    .logout:hover { background: var(--bg-subtle); }
+    .dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 0 2px var(--accent-soft);
+      display: inline-block; margin-right: 6px;
+    }
+
+    /* TABS */
+    .tabs {
+      max-width: 1280px; margin: 0 auto;
+      padding: 0 20px;
+      display: flex; gap: 4px;
+      border-bottom: 1px solid var(--border);
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .tabs::-webkit-scrollbar { display: none; }
+    .tab {
+      padding: 12px 14px;
+      font-size: 13px; font-weight: 500;
+      color: var(--ink-soft);
+      border: none; background: transparent;
+      border-bottom: 2px solid transparent;
+      transition: all 0.12s;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .tab:hover { color: var(--ink); }
+    .tab.active {
+      color: var(--ink);
+      border-bottom-color: var(--ink);
+      font-weight: 600;
+    }
+
+    /* CONTAINER */
+    .container {
+      max-width: 1280px; margin: 0 auto;
+      padding: 24px 20px 60px;
+    }
+    @media (min-width: 768px) {
+      .container { padding: 32px; }
+    }
+
+    .panel { display: none; }
+    .panel.active { display: block; }
+
+    .page-title {
+      font-size: 24px; font-weight: 700;
+      letter-spacing: -0.02em; margin-bottom: 4px;
+    }
+    .page-sub {
+      color: var(--ink-soft); font-size: 14px;
+      margin-bottom: 24px;
+    }
+
+    /* KPIs */
+    .kpis {
+      display: grid; grid-template-columns: repeat(2, 1fr);
+      gap: 12px; margin-bottom: 20px;
+    }
+    @media (min-width: 768px) {
+      .kpis { grid-template-columns: repeat(4, 1fr); gap: 14px; }
+    }
+    .kpi {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--r-md);
+      padding: 16px 18px;
+      transition: border-color 0.15s;
+    }
+    .kpi.verde { border-left: 3px solid var(--accent); }
+    .kpi.amarelo { border-left: 3px solid var(--warning); }
+    .kpi.critico { border-left: 3px solid var(--danger); }
+    .kpi-label {
+      font-size: 12px; font-weight: 500;
+      color: var(--ink-soft); margin-bottom: 4px;
+    }
+    .kpi-value {
+      font-size: 24px; font-weight: 700;
+      letter-spacing: -0.025em; line-height: 1.1;
+    }
+    @media (min-width: 768px) { .kpi-value { font-size: 26px; } }
+    .kpi-meta {
+      font-size: 11px; color: var(--ink-mute);
+      margin-top: 4px;
+    }
+    .kpi-meta strong { color: var(--ink-2); font-weight: 600; }
+    .kpi-bar {
+      height: 4px; background: var(--bg-subtle);
+      border-radius: 999px; overflow: hidden;
+      margin-top: 10px;
+    }
+    .kpi-fill { height: 100%; background: var(--accent); border-radius: 999px; transition: width 0.6s; }
+    .kpi.amarelo .kpi-fill { background: var(--warning); }
+    .kpi.critico .kpi-fill { background: var(--danger); }
+
+    /* CARD */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--r-md);
+      padding: 18px 20px;
+      margin-bottom: 14px;
+    }
+    .card-head {
+      display: flex; align-items: flex-start; justify-content: space-between;
+      gap: 12px; margin-bottom: 14px;
+    }
+    .card-title {
+      font-size: 14px; font-weight: 600;
+      letter-spacing: -0.005em;
+    }
+    .card-sub {
+      font-size: 12px; color: var(--ink-mute);
+      margin-top: 2px; font-weight: 400;
+    }
+
+    /* FORM */
+    .form-grid { display: grid; gap: 12px; }
+    .field { display: flex; flex-direction: column; gap: 6px; }
+    .field-label {
+      font-size: 11px; font-weight: 600;
+      color: var(--ink-soft); letter-spacing: 0.02em;
+      text-transform: uppercase;
+    }
+    .input, .select, .textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--border-strong);
+      border-radius: var(--r-sm);
+      background: var(--bg-card);
+      font-family: inherit;
+      font-size: 13px;
+      color: var(--ink);
+      transition: all 0.12s;
+    }
+    .input:focus, .select:focus, .textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-soft);
+    }
+    .textarea { resize: vertical; min-height: 70px; line-height: 1.4; }
+    .field-group {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .btn {
+      padding: 10px 16px;
+      background: var(--ink); color: white;
+      border: 1px solid var(--ink);
+      border-radius: var(--r-sm);
+      font-size: 13px; font-weight: 600;
+      transition: opacity 0.15s;
+    }
+    .btn:hover { opacity: 0.9; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-secondary {
+      background: var(--bg-card);
+      color: var(--ink);
+      border-color: var(--border-strong);
+    }
+    .btn-secondary:hover { background: var(--bg-subtle); opacity: 1; }
+    .form-result {
+      font-size: 12px;
+      padding: 10px 12px;
+      border-radius: var(--r-sm);
+      margin-top: 8px;
+      line-height: 1.45;
+    }
+    .form-result.success {
+      background: var(--accent-soft); color: var(--accent-deep);
+      border: 1px solid rgba(27, 156, 133, 0.2);
+    }
+    .form-result.error {
+      background: var(--danger-soft); color: var(--danger);
+      border: 1px solid rgba(185, 28, 28, 0.2);
+    }
+    .form-result code {
+      font-family: 'SF Mono', Menlo, monospace;
+      font-size: 11px;
+      background: var(--bg-card);
+      padding: 2px 5px; border-radius: 3px;
+      color: var(--ink);
+    }
+
+    /* GRID */
+    .grid-2 {
+      display: grid; gap: 14px;
+      grid-template-columns: 1fr;
+    }
+    @media (min-width: 900px) {
+      .grid-2 { grid-template-columns: 1fr 1fr; }
+    }
+
+    /* DEMANDAS LIST */
+    .demanda-row {
+      display: flex; gap: 10px; align-items: flex-start;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .demanda-row:last-child { border-bottom: none; }
+    .demanda-bar {
+      width: 3px; align-self: stretch;
+      border-radius: 2px;
+      background: var(--ink-mute);
+      flex-shrink: 0;
+    }
+    .demanda-bar.Alto { background: var(--warning); }
+    .demanda-bar.CrÃ­tico { background: var(--danger); }
+    .demanda-content { flex: 1; min-width: 0; }
+    .demanda-title {
+      font-size: 13px; font-weight: 600; color: var(--ink);
+      line-height: 1.35;
+    }
+    .demanda-meta {
+      font-size: 11px; color: var(--ink-mute);
+      margin-top: 4px;
+      display: flex; gap: 6px; flex-wrap: wrap;
+    }
+    .chip {
+      font-size: 10px;
+      padding: 2px 6px; border-radius: 3px;
+      background: var(--bg-subtle);
+      color: var(--ink-soft);
+      font-weight: 500;
+    }
+    .chip-status { background: var(--accent-soft); color: var(--accent-deep); }
+    .chip-status.ConcluÃ­do { background: var(--accent-soft); color: var(--accent-deep); }
+    .chip-status.Em\\ andamento { background: #DBEAFE; color: #1E40AF; }
+    .chip-status.NÃ£o\\ iniciada { background: var(--bg-subtle); color: var(--ink-soft); }
+
+    /* AGENTES */
+    .agentes-grid {
+      display: grid; gap: 10px;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    }
+    .agente {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--r-sm);
+      padding: 12px;
+      transition: all 0.15s;
+      cursor: pointer;
+    }
+    .agente:hover {
+      border-color: var(--border-strong);
+      transform: translateY(-1px);
+    }
+    .agente-head {
+      display: flex; justify-content: space-between; align-items: center;
+      gap: 6px; margin-bottom: 6px;
+    }
+    .agente-cod {
+      font-size: 11px; font-weight: 700;
+      letter-spacing: -0.01em;
+      padding: 2px 7px; border-radius: 4px;
+      background: var(--bg-subtle); color: var(--ink);
+    }
+    .agente-cat {
+      font-size: 9px; font-weight: 600;
+      color: var(--ink-mute);
+      text-transform: uppercase; letter-spacing: 0.05em;
+    }
+    .agente-nome {
+      font-size: 13px; font-weight: 600;
+      color: var(--ink); margin-bottom: 4px;
+      line-height: 1.3;
+    }
+    .agente-funcao {
+      font-size: 11px; color: var(--ink-soft);
+      line-height: 1.4;
+    }
+    .agente-acionar {
+      margin-top: 8px; padding-top: 8px;
+      border-top: 1px solid var(--border);
+      font-size: 10px; color: var(--ink-mute);
+      line-height: 1.4;
+    }
+    .agente-acionar strong { color: var(--ink-soft); font-weight: 600; }
+
+    /* ATALHOS */
+    .atalhos-cat-title {
+      font-size: 11px; font-weight: 700;
+      color: var(--ink-mute);
+      text-transform: uppercase; letter-spacing: 0.06em;
+      margin: 16px 0 8px;
+    }
+    .atalhos-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 8px;
+    }
+    .atalho {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 12px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--r-sm);
+      transition: all 0.12s;
+    }
+    .atalho:hover {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+    }
+    .atalho-icon { font-size: 18px; }
+    .atalho-name {
+      font-size: 12px; font-weight: 500;
+      color: var(--ink);
+    }
+
+    /* ALERTAS */
+    .alerta {
+      padding: 12px 14px;
+      border-radius: var(--r-sm);
+      border-left: 3px solid;
+      margin-bottom: 8px;
+    }
+    .alerta.alta { background: var(--danger-soft); border-left-color: var(--danger); }
+    .alerta.media { background: var(--warning-soft); border-left-color: var(--warning); }
+    .alerta.baixa { background: var(--accent-soft); border-left-color: var(--accent); }
+    .alerta-title {
+      font-size: 13px; font-weight: 600;
+      margin-bottom: 4px;
+    }
+    .alerta-desc {
+      font-size: 12px; color: var(--ink-soft);
+      line-height: 1.45;
+    }
+    .alerta-meta {
+      font-size: 11px; color: var(--ink-mute);
+      margin-top: 6px;
+    }
+
+    /* LOADING */
+    .loading {
+      padding: 24px; text-align: center;
+      color: var(--ink-mute); font-size: 12px;
+    }
+    .skeleton {
+      height: 14px;
+      background: linear-gradient(90deg, var(--bg-subtle) 0%, var(--border) 50%, var(--bg-subtle) 100%);
+      background-size: 200% 100%;
+      animation: shimmer 1.4s infinite;
+      border-radius: 4px; margin: 6px 0;
+    }
+    @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+    .empty {
+      padding: 24px 12px; text-align: center;
+      color: var(--ink-mute); font-size: 12px;
+    }
+
+    /* SETUP banner */
+    .setup-banner {
+      background: var(--warning-soft);
+      color: #7a4a0a;
+      border: 1px solid #FBBF24;
+      border-radius: 8px;
+      padding: 12px 14px;
+      margin: 14px 0 0;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+    .setup-banner strong { font-weight: 700; color: #5a3a08; }
+    .setup-banner code {
+      font-family: 'SF Mono', Menlo, monospace;
+      font-size: 11px; background: rgba(255,255,255,0.5);
+      padding: 1px 5px; border-radius: 3px;
+    }
+  </style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="brand">
+      <span class="brand-mark">AB</span>
+      <span class="brand-text">Marketing<small>AB Group</small></span>
+    </div>
+    <div class="topbar-meta">
+      <span class="meta-time" id="meta-time">â</span>
+      <span><span class="dot"></span><span id="status-label">Online</span></span>
+      <button class="logout" id="btn-logout">Sair</button>
+    </div>
+  </div>
+  <div class="tabs" id="tabs">
+    <button class="tab active" data-tab="dashboard">Dashboard</button>
+    <button class="tab" data-tab="demandas">Demandas</button>
+    <button class="tab" data-tab="agentes">Agentes</button>
+    <button class="tab" data-tab="atalhos">Atalhos</button>
+    <button class="tab" data-tab="alertas">Alertas</button>
+  </div>
+</header>
+
+<main class="container">
+
+  <!-- DASHBOARD -->
+  <section class="panel active" id="panel-dashboard">
+    <h1 class="page-title" id="greeting">Bom dia, time.</h1>
+    <p class="page-sub">Cockpit central do marketing AB Group. Cada mÃ©trica reflete a saÃºde do funil este mÃªs.</p>
+
+    <div class="kpis" id="kpis">
+      <div class="kpi"><div class="kpi-label">Carregandoâ¦</div></div>
+      <div class="kpi"><div class="kpi-label">Carregandoâ¦</div></div>
+      <div class="kpi"><div class="kpi-label">Carregandoâ¦</div></div>
+      <div class="kpi"><div class="kpi-label">Carregandoâ¦</div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <div class="card-title">Alertas crÃ­ticos da semana</div>
+          <div class="card-sub">O que precisa de atenÃ§Ã£o agora</div>
+        </div>
+      </div>
+      <div id="alertas-resumo">
+        <div class="loading"><div class="skeleton"></div><div class="skeleton" style="width:80%"></div></div>
+      </div>
+    </div>
+
+    <div id="setup-banner-container"></div>
+  </section>
+
+  <!-- DEMANDAS -->
+  <section class="panel" id="panel-demandas">
+    <h1 class="page-title">Demandas ad-hoc</h1>
+    <p class="page-sub">Trabalho que nÃ£o passa pelo pipeline padrÃ£o de vÃ­deos. Submeta aqui â Ag. 0 classifica e roteia.</p>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-head">
+          <div>
+            <div class="card-title">Nova demanda</div>
+            <div class="card-sub">Salva direto no Google Sheets</div>
+          </div>
+        </div>
+        <form class="form-grid" id="form-demanda">
+          <div class="field">
+            <label class="field-label">O que vocÃª precisa</label>
+            <select class="select" name="tipo" required>
+              <option value="Roteiro vÃ­deo curto">Roteiro vÃ­deo curto</option>
+              <option value="Roteiro YouTube longo">Roteiro YouTube longo</option>
+              <option value="Post avulso">Post avulso Â· legenda</option>
+              <option value="Campanha">Campanha nova</option>
+              <option value="SEO">SEO</option>
+              <option value="SugestÃ£o temas">SugestÃ£o de temas</option>
+              <option value="AnÃ¡lise performance">AnÃ¡lise de performance</option>
+              <option value="NotÃ­cia blog">MatÃ©ria para blog</option>
+              <option value="Briefing SEO">Briefing SEO (pra Sherliany)</option>
+              <option value="EdiÃ§Ã£o curtos">EdiÃ§Ã£o vÃ­deos curtos</option>
+              <option value="EdiÃ§Ã£o longos">EdiÃ§Ã£o vÃ­deos longos</option>
+              <option value="Agendamento">Agendamento</option>
+              <option value="CalendÃ¡rio mensal">CalendÃ¡rio mensal</option>
+              <option value="ConcorrÃªncia">AnÃ¡lise de concorrÃªncia</option>
+              <option value="Jornada ecossistema">Jornada ecossistema</option>
+              <option value="AnÃ¡lise funil">AnÃ¡lise de funil</option>
+              <option value="Parceria/Imprensa">Parceria / Imprensa</option>
+              <option value="CRÃTICO crise">CRÃTICO Â· crise / urgente</option>
+            </select>
+          </div>
+          <div class="field">
+            <label class="field-label">TÃ­tulo</label>
+            <input class="input" type="text" name="demanda" required maxlength="100" placeholder="Ex: Roteiro Aposentadoria Especial profissÃµes saÃºde">
+          </div>
+          <div class="field-group">
+            <div class="field">
+              <label class="field-label">Empresa</label>
+              <select class="select" name="empresa">
+                <option value="ABADV">ABADV</option>
+                <option value="AposentaBR">AposentaBR</option>
+                <option value="AB CRED">AB CRED</option>
+                <option value="Vitalidade+">Vitalidade+</option>
+                <option value="AB Group geral" selected>AB Group geral</option>
+              </select>
+            </div>
+            <div class="field">
+              <label class="field-label">Prioridade</label>
+              <select class="select" name="prioridade">
+                <option value="Normal" selected>Normal</option>
+                <option value="Alto">Alto</option>
+                <option value="CrÃ­tico">CrÃ­tico</option>
+                <option value="Baixo">Baixo</option>
+              </select>
+            </div>
+          </div>
+          <div class="field">
+            <label class="field-label">Quem estÃ¡ pedindo</label>
+            <select class="select" name="solicitante">
+              <option value="AndrÃ© Beschizza">AndrÃ© Beschizza</option>
+              <option value="Matheus">Matheus</option>
+              <option value="Equipe AB Group" selected>Equipe AB Group</option>
+              <option value="Zorks (SEO YT + EdiÃ§Ã£o)">Zorks (SEO YT + EdiÃ§Ã£o)</option>
+              <option value="Happyhour (SEO Blog)">Happyhour (SEO Blog)</option>
+              <option value="Sherliany (Redatora)">Sherliany (Redatora)</option>
+              <option value="Equipe Comercial">Equipe Comercial</option>
+              <option value="Equipe SAC">Equipe SAC</option>
+            </select>
+          </div>
+          <div class="field">
+            <label class="field-label">Briefing</label>
+            <textarea class="textarea" name="briefing" maxlength="2000" placeholder="PÃºblico, prazo, tom, referÃªncias, restriÃ§Ãµes..."></textarea>
+          </div>
+          <div class="field-group">
+            <div class="field">
+              <label class="field-label">Prazo</label>
+              <input class="input" type="date" name="prazo">
+            </div>
+            <div class="field" style="justify-content: flex-end;">
+              <button type="submit" class="btn" id="btn-submit">Enviar demanda</button>
+            </div>
+          </div>
+          <div id="form-result"></div>
+        </form>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <div>
+            <div class="card-title">Fila de demandas</div>
+            <div class="card-sub" id="demandas-count">â</div>
+          </div>
+        </div>
+        <div id="demandas-list">
+          <div class="loading"><div class="skeleton"></div><div class="skeleton" style="width:80%"></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- AGENTES -->
+  <section class="panel" id="panel-agentes">
+    <h1 class="page-title">Mapa do time</h1>
+    <p class="page-sub">16 agentes do sistema. Saiba quem aciona o quÃª â sem precisar do Telegram.</p>
+    <div id="agentes-grid" class="agentes-grid">
+      <div class="loading">Carregando agentesâ¦</div>
+    </div>
+  </section>
+
+  <!-- ATALHOS -->
+  <section class="panel" id="panel-atalhos">
+    <h1 class="page-title">Sistemas conectados</h1>
+    <p class="page-sub">Atalhos para todos os sistemas que o time usa no dia a dia.</p>
+    <div id="atalhos-container">
+      <div class="loading">Carregando atalhosâ¦</div>
+    </div>
+  </section>
+
+  <!-- ALERTAS -->
+  <section class="panel" id="panel-alertas">
+    <h1 class="page-title">Alertas</h1>
+    <p class="page-sub">O que precisa de atenÃ§Ã£o. Resolva e marque como concluÃ­do na planilha.</p>
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <div class="card-title">Criar alerta</div>
+          <div class="card-sub">Use quando algo crÃ­tico aparece no meio da semana</div>
+        </div>
+      </div>
+      <form class="form-grid" id="form-alerta">
+        <div class="field">
+          <label class="field-label">TÃ­tulo</label>
+          <input class="input" type="text" name="titulo" required maxlength="120" placeholder="Ex: Google Ads pagamento pendente">
+        </div>
+        <div class="field">
+          <label class="field-label">DescriÃ§Ã£o</label>
+          <textarea class="textarea" name="descricao" maxlength="500"></textarea>
+        </div>
+        <div class="field-group">
+          <div class="field">
+            <label class="field-label">Severidade</label>
+            <select class="select" name="severidade">
+              <option value="alta">Alta</option>
+              <option value="media" selected>MÃ©dia</option>
+              <option value="baixa">Baixa</option>
+            </select>
+          </div>
+          <div class="field">
+            <label class="field-label">ResponsÃ¡vel</label>
+            <input class="input" type="text" name="responsavel" placeholder="Ex: Matheus">
+          </div>
+        </div>
+        <button type="submit" class="btn" id="btn-alerta">Criar alerta</button>
+        <div id="alerta-result"></div>
+      </form>
+    </div>
+
+    <div style="margin-top: 18px;">
+      <h3 style="font-size:14px;font-weight:600;margin-bottom:10px;">Alertas ativos</h3>
+      <div id="alertas-list">
+        <div class="loading"><div class="skeleton"></div></div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<script>
+(async () => {
+  // SaudaÃ§Ã£o dinÃ¢mica
+  function setGreeting() {
+    const h = new Date().getHours();
+    let g = 'Bom dia';
+    if (h >= 12 && h < 18) g = 'Boa tarde';
+    else if (h >= 18 || h < 5) g = 'Boa noite';
+    document.getElementById('greeting').textContent = `${g}, time.`;
+    const dow = ['dom','seg','ter','qua','qui','sex','sÃ¡b'];
+    const meses = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+    const d = new Date();
+    document.getElementById('meta-time').textContent =
+      `${dow[d.getDay()]} Â· ${d.getDate()} ${meses[d.getMonth()]}`;
+  }
+  setGreeting();
+
+  function escapeHtml(s) {
+    if (s == null) return '';
+    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  async function api(path, opts = {}) {
+    try {
+      const res = await fetch(path, opts);
+      if (res.status === 401) {
+        window.location.href = '/login';
+        return { __error: 'auth' };
+      }
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'HTTP ' + res.status);
+      return json;
+    } catch (e) {
+      return { __error: e.message };
+    }
+  }
+
+  // ===== TABS =====
+  document.getElementById('tabs').addEventListener('click', (e) => {
+    const tab = e.target.closest('[data-tab]');
+    if (!tab) return;
+    const id = tab.dataset.tab;
+    document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t === tab));
+    document.querySelectorAll('.panel').forEach(p => p.classList.toggle('active', p.id === 'panel-' + id));
+  });
+
+  // ===== LOGOUT =====
+  document.getElementById('btn-logout').addEventListener('click', async () => {
+    await fetch('/logout', { method: 'POST' });
+    window.location.href = '/login';
+  });
+
+  // ===== KPIs =====
+  async function loadKpis() {
+    const data = await api('/api/kpis');
+    const el = document.getElementById('kpis');
+    if (data.__error || !data.kpis || data.kpis.length === 0) {
+      el.innerHTML = `
+        <div class="kpi"><div class="kpi-label">Leads</div><div class="kpi-value">â</div><div class="kpi-meta">Meta <strong>2.500</strong></div></div>
+        <div class="kpi"><div class="kpi-label">Qualificados</div><div class="kpi-value">â</div><div class="kpi-meta">Meta <strong>290</strong></div></div>
+        <div class="kpi"><div class="kpi-label">Contratos</div><div class="kpi-value">â</div><div class="kpi-meta">Meta <strong>155</strong></div></div>
+        <div class="kpi"><div class="kpi-label">ConversÃ£o</div><div class="kpi-value">â</div><div class="kpi-meta">Meta <strong>11,6%</strong></div></div>
+      `;
+      showSetupBanner('A aba "kpis" estÃ¡ vazia ou ainda nÃ£o foi criada na planilha. Crie ela com colunas <code>Indicador, Meta, Realizado, Unidade, Atualizado</code>.');
+      return;
+    }
+    el.innerHTML = data.kpis.map(k => `
+      <div class="kpi ${k.status}">
+        <div class="kpi-label">${escapeHtml(k.indicador)}</div>
+        <div class="kpi-value">${formatNum(k.realizado)}${k.unidade ? '<span style="font-size:13px;color:var(--ink-mute);"> ' + escapeHtml(k.unidade) + '</span>' : ''}</div>
+        <div class="kpi-meta">Meta <strong>${formatNum(k.meta)}</strong> Â· ${k.pct}%</div>
+        <div class="kpi-bar"><div class="kpi-fill" style="width:${Math.min(100, k.pct)}%"></div></div>
+      </div>
+    `).join('');
+  }
+  function formatNum(n) {
+    if (n >= 1000) return n.toLocaleString('pt-BR');
+    if (Number.isInteger(n)) return String(n);
+    return n.toFixed(1).replace('.', ',');
+  }
+
+  // ===== ALERTAS =====
+  async function loadAlertas() {
+    const data = await api('/api/alertas');
+    const resumo = document.getElementById('alertas-resumo');
+    const lista = document.getElementById('alertas-list');
+    if (data.__error || !data.alertas) {
+      resumo.innerHTML = '<div class="empty">NÃ£o foi possÃ­vel carregar alertas.</div>';
+      lista.innerHTML = resumo.innerHTML;
+      return;
+    }
+    if (data.alertas.length === 0) {
+      resumo.innerHTML = '<div class="empty">Nenhum alerta ativo. Tudo no verde.</div>';
+      lista.innerHTML = resumo.innerHTML;
+      return;
+    }
+    const html = data.alertas.map(a => `
+      <div class="alerta ${a.severidade}">
+        <div class="alerta-title">${escapeHtml(a.titulo)}</div>
+        <div class="alerta-desc">${escapeHtml(a.descricao || '')}</div>
+        <div class="alerta-meta">${escapeHtml(a.data || '')}${a.responsavel ? ' Â· ' + escapeHtml(a.responsavel) : ''}</div>
+      </div>
+    `).join('');
+    resumo.innerHTML = data.alertas.slice(0, 3).map(a => `
+      <div class="alerta ${a.severidade}">
+        <div class="alerta-title">${escapeHtml(a.titulo)}</div>
+        <div class="alerta-desc">${escapeHtml(a.descricao || '')}</div>
+      </div>
+    `).join('');
+    lista.innerHTML = html;
+  }
+
+  // ===== DEMANDAS =====
+  async function loadDemandas() {
+    const data = await api('/api/demandas');
+    const el = document.getElementById('demandas-list');
+    const count = document.getElementById('demandas-count');
+    if (data.__error || !data.demandas) {
+      el.innerHTML = '<div class="empty">NÃ£o foi possÃ­vel carregar demandas.</div>';
+      return;
+    }
+    count.textContent = `${data.total} demanda${data.total !== 1 ? 's' : ''}`;
+    if (data.demandas.length === 0) {
+      el.innerHTML = '<div class="empty">Nenhuma demanda ainda.</div>';
+      return;
+    }
+    el.innerHTML = data.demandas.slice(0, 12).map(d => `
+      <div class="demanda-row">
+        <span class="demanda-bar ${d.prioridade}"></span>
+        <div class="demanda-content">
+          <div class="demanda-title">${escapeHtml(d.demanda)}</div>
+          <div class="demanda-meta">
+            ${d.tipo ? `<span class="chip">${escapeHtml(d.tipo)}</span>` : ''}
+            ${d.empresa ? `<span class="chip">${escapeHtml(d.empresa)}</span>` : ''}
+            ${d.status ? `<span class="chip chip-status">${escapeHtml(d.status)}</span>` : ''}
+            <span>${escapeHtml(d.solicitante || '')}</span>
+            <span>Â·</span>
+            <span>${escapeHtml(d.submetido || '')}</span>
+          </div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  // ===== AGENTES =====
+  async function loadAgentes() {
+    const data = await api('/api/agentes');
+    const el = document.getElementById('agentes-grid');
+    if (data.__error || !data.agentes) {
+      el.innerHTML = '<div class="empty">NÃ£o foi possÃ­vel carregar agentes.</div>';
+      return;
+    }
+    el.innerHTML = data.agentes.map(a => `
+      <div class="agente">
+        <div class="agente-head">
+          <span class="agente-cod">${escapeHtml(a.codigo)}</span>
+          <span class="agente-cat">${escapeHtml(a.categoria || '')}</span>
+        </div>
+        <div class="agente-nome">${escapeHtml(a.nome)}</div>
+        <div class="agente-funcao">${escapeHtml(a.funcao || '')}</div>
+        ${a.acionar ? `<div class="agente-acionar"><strong>Quando acionar:</strong> ${escapeHtml(a.acionar)}</div>` : ''}
+      </div>
+    `).join('');
+  }
+
+  // ===== ATALHOS =====
+  async function loadAtalhos() {
+    const data = await api('/api/atalhos');
+    const el = document.getElementById('atalhos-container');
+    if (data.__error || !data.grupos) {
+      el.innerHTML = '<div class="empty">NÃ£o foi possÃ­vel carregar atalhos.</div>';
+      return;
+    }
+    const grupos = data.grupos;
+    const ordem = ['AutomaÃ§Ã£o', 'PublicaÃ§Ã£o', 'AnÃºncios', 'Plataformas', 'Leads', 'SEO', 'Pesquisa', 'Analytics', 'MÃ­dia', 'Operacional', 'Outros'];
+    const cats = Object.keys(grupos).sort((a, b) => {
+      const ai = ordem.indexOf(a), bi = ordem.indexOf(b);
+      return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
+    });
+    el.innerHTML = cats.map(cat => `
+      <div class="atalhos-cat-title">${escapeHtml(cat)}</div>
+      <div class="atalhos-grid">
+        ${grupos[cat].map(a => `
+          <a class="atalho" href="${escapeHtml(a.url)}" target="_blank" rel="noopener">
+            <span class="atalho-icon">${a.icon || 'ð'}</span>
+            <span class="atalho-name">${escapeHtml(a.nome)}</span>
+          </a>
+        `).join('')}
+      </div>
+    `).join('');
+  }
+
+  // ===== FORM DEMANDA =====
+  document.getElementById('form-demanda').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const form = e.target;
+    const btn = document.getElementById('btn-submit');
+    const result = document.getElementById('form-result');
+    const data = Object.fromEntries(new FormData(form).entries());
+    btn.disabled = true; btn.textContent = 'Enviandoâ¦';
+    result.innerHTML = '';
+
+    const json = await api('/api/demandas', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+
+    if (json.__error) {
+      result.className = 'form-result error';
+      result.innerHTML = `â ${escapeHtml(json.__error)}`;
+    } else {
+      result.className = 'form-result success';
+      result.innerHTML = `â <strong>Demanda registrada.</strong> SequÃªncia: <code>${escapeHtml(json.sequencia || '')}</code>`;
+      form.reset();
+      loadDemandas();
+    }
+    btn.disabled = false; btn.textContent = 'Enviar demanda';
+  });
+
+  // ===== FORM ALERTA =====
+  document.getElementById('form-alerta').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const form = e.target;
+    const btn = document.getElementById('btn-alerta');
+    const result = document.getElementById('alerta-result');
+    const data = Object.fromEntries(new FormData(form).entries());
+    btn.disabled = true; btn.textContent = 'Criandoâ¦';
+
+    const json = await api('/api/alertas', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+
+    if (json.__error) {
+      result.className = 'form-result error';
+      result.innerHTML = `â ${escapeHtml(json.__error)}`;
+    } else {
+      result.className = 'form-result success';
+      result.innerHTML = 'â Alerta criado.';
+      form.reset();
+      loadAlertas();
+    }
+    btn.disabled = false; btn.textContent = 'Criar alerta';
+  });
+
+  function showSetupBanner(html) {
+    const c = document.getElementById('setup-banner-container');
+    c.innerHTML = `<div class="setup-banner">${html}</div>`;
+  }
+
+  // ===== BOOT =====
+  await Promise.all([loadKpis(), loadAlertas(), loadDemandas(), loadAgentes(), loadAtalhos()]);
+})();
+</script>
+
+</body>
+</html>
