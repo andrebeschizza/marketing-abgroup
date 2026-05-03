@@ -283,7 +283,7 @@
       flex-shrink: 0;
     }
     .demanda-bar.Alto { background: var(--warning); }
-    .demanda-bar.CrÃ­tico { background: var(--danger); }
+    .demanda-bar.Crítico { background: var(--danger); }
     .demanda-content { flex: 1; min-width: 0; }
     .demanda-title {
       font-size: 13px; font-weight: 600; color: var(--ink);
@@ -302,9 +302,9 @@
       font-weight: 500;
     }
     .chip-status { background: var(--accent-soft); color: var(--accent-deep); }
-    .chip-status.ConcluÃ­do { background: var(--accent-soft); color: var(--accent-deep); }
+    .chip-status.Concluído { background: var(--accent-soft); color: var(--accent-deep); }
     .chip-status.Em\\ andamento { background: #DBEAFE; color: #1E40AF; }
-    .chip-status.NÃ£o\\ iniciada { background: var(--bg-subtle); color: var(--ink-soft); }
+    .chip-status.Não\\ iniciada { background: var(--bg-subtle); color: var(--ink-soft); }
 
     /* AGENTES */
     .agentes-grid {
@@ -443,6 +443,111 @@
       font-size: 11px; background: rgba(255,255,255,0.5);
       padding: 1px 5px; border-radius: 3px;
     }
+
+    /* CALENDÁRIO */
+    .cal-filters {
+      display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+      margin-bottom: 18px;
+    }
+    .cal-filters .select { width: auto; min-width: 140px; }
+    .cal-count {
+      font-size: 12px; color: var(--ink-mute);
+      margin-left: auto; padding: 0 4px;
+    }
+    .kanban {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(220px, 1fr));
+      gap: 12px;
+      overflow-x: auto;
+      padding-bottom: 12px;
+    }
+    @media (max-width: 1100px) {
+      .kanban { grid-template-columns: repeat(3, minmax(220px, 1fr)); }
+    }
+    @media (max-width: 700px) {
+      .kanban { grid-template-columns: 1fr; }
+    }
+    .kanban-col {
+      background: var(--bg-subtle);
+      border: 1px solid var(--border);
+      border-radius: var(--r-md);
+      padding: 12px 10px;
+      min-height: 120px;
+    }
+    .kanban-col-head {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 10px;
+      font-size: 11px; font-weight: 700; letter-spacing: 0.04em;
+      color: var(--ink-soft); text-transform: uppercase;
+    }
+    .kanban-col-count {
+      font-size: 10px; padding: 2px 7px;
+      background: var(--bg-card); border-radius: 999px;
+      color: var(--ink-soft); font-weight: 600;
+    }
+    .kanban-col[data-status="Gravado"] .kanban-col-count { background: #E5E5E0; }
+    .kanban-col[data-status="Editando"] .kanban-col-count { background: var(--warning-soft); color: var(--warning); }
+    .kanban-col[data-status="Aguardando aprovação"] .kanban-col-count { background: #FED7AA; color: #9A3412; }
+    .kanban-col[data-status="Aprovado"] .kanban-col-count { background: #DBEAFE; color: #1E40AF; }
+    .kanban-col[data-status="Agendado"] .kanban-col-count { background: #EDE9FE; color: #6D28D9; }
+    .kanban-col[data-status="Publicado"] .kanban-col-count { background: var(--accent-soft); color: var(--accent-deep); }
+    .kanban-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--r-sm);
+      padding: 10px 12px; margin-bottom: 8px;
+      cursor: pointer;
+      transition: all 0.12s;
+    }
+    .kanban-card:hover {
+      border-color: var(--border-strong);
+      transform: translateY(-1px);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+    .kanban-card-title {
+      font-size: 12px; font-weight: 600; color: var(--ink);
+      line-height: 1.3; margin-bottom: 6px;
+    }
+    .kanban-card-meta {
+      display: flex; flex-wrap: wrap; gap: 5px;
+      font-size: 10px; color: var(--ink-mute);
+    }
+    .kanban-card-meta .chip { font-size: 9px; padding: 1px 5px; }
+    .kanban-card-date {
+      font-size: 10px; font-weight: 600; color: var(--accent-deep);
+      margin-bottom: 4px;
+    }
+    .kanban-empty {
+      font-size: 11px; color: var(--ink-mute);
+      padding: 8px 4px; text-align: center;
+      font-style: italic;
+    }
+
+    /* BANNER PUBLICA HOJE */
+    .publica-banner {
+      background: var(--accent-soft);
+      border: 1px solid rgba(27, 156, 133, 0.25);
+      border-radius: var(--r-md);
+      padding: 14px 16px;
+      margin-bottom: 18px;
+    }
+    .publica-banner-title {
+      font-size: 13px; font-weight: 700; color: var(--accent-deep);
+      margin-bottom: 8px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .publica-banner-list {
+      display: flex; flex-wrap: wrap; gap: 8px;
+    }
+    .publica-banner-item {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--r-sm);
+      padding: 6px 10px;
+      font-size: 11px;
+      color: var(--ink-soft);
+    }
+    .publica-banner-item strong { color: var(--ink); font-weight: 600; }
   </style>
 </head>
 <body>
@@ -454,13 +559,14 @@
       <span class="brand-text">Marketing<small>AB Group</small></span>
     </div>
     <div class="topbar-meta">
-      <span class="meta-time" id="meta-time">â</span>
+      <span class="meta-time" id="meta-time">—</span>
       <span><span class="dot"></span><span id="status-label">Online</span></span>
       <button class="logout" id="btn-logout">Sair</button>
     </div>
   </div>
   <div class="tabs" id="tabs">
     <button class="tab active" data-tab="dashboard">Dashboard</button>
+    <button class="tab" data-tab="calendario">Calendário</button>
     <button class="tab" data-tab="demandas">Demandas</button>
     <button class="tab" data-tab="agentes">Agentes</button>
     <button class="tab" data-tab="atalhos">Atalhos</button>
@@ -473,20 +579,22 @@
   <!-- DASHBOARD -->
   <section class="panel active" id="panel-dashboard">
     <h1 class="page-title" id="greeting">Bom dia, time.</h1>
-    <p class="page-sub">Cockpit central do marketing AB Group. Cada mÃ©trica reflete a saÃºde do funil este mÃªs.</p>
+    <p class="page-sub">Cockpit central do marketing AB Group. Cada métrica reflete a saúde do funil este mês.</p>
+
+    <div id="dashboard-banner-publica"></div>
 
     <div class="kpis" id="kpis">
-      <div class="kpi"><div class="kpi-label">Carregandoâ¦</div></div>
-      <div class="kpi"><div class="kpi-label">Carregandoâ¦</div></div>
-      <div class="kpi"><div class="kpi-label">Carregandoâ¦</div></div>
-      <div class="kpi"><div class="kpi-label">Carregandoâ¦</div></div>
+      <div class="kpi"><div class="kpi-label">Carregando…</div></div>
+      <div class="kpi"><div class="kpi-label">Carregando…</div></div>
+      <div class="kpi"><div class="kpi-label">Carregando…</div></div>
+      <div class="kpi"><div class="kpi-label">Carregando…</div></div>
     </div>
 
     <div class="card">
       <div class="card-head">
         <div>
-          <div class="card-title">Alertas crÃ­ticos da semana</div>
-          <div class="card-sub">O que precisa de atenÃ§Ã£o agora</div>
+          <div class="card-title">Alertas críticos da semana</div>
+          <div class="card-sub">O que precisa de atenção agora</div>
         </div>
       </div>
       <div id="alertas-resumo">
@@ -500,7 +608,7 @@
   <!-- DEMANDAS -->
   <section class="panel" id="panel-demandas">
     <h1 class="page-title">Demandas ad-hoc</h1>
-    <p class="page-sub">Trabalho que nÃ£o passa pelo pipeline padrÃ£o de vÃ­deos. Submeta aqui â Ag. 0 classifica e roteia.</p>
+    <p class="page-sub">Trabalho que não passa pelo pipeline padrão de vídeos. Submeta aqui — Ag. 0 classifica e roteia.</p>
 
     <div class="grid-2">
       <div class="card">
@@ -512,31 +620,31 @@
         </div>
         <form class="form-grid" id="form-demanda">
           <div class="field">
-            <label class="field-label">O que vocÃª precisa</label>
+            <label class="field-label">O que você precisa</label>
             <select class="select" name="tipo" required>
-              <option value="Roteiro vÃ­deo curto">Roteiro vÃ­deo curto</option>
+              <option value="Roteiro vídeo curto">Roteiro vídeo curto</option>
               <option value="Roteiro YouTube longo">Roteiro YouTube longo</option>
-              <option value="Post avulso">Post avulso Â· legenda</option>
+              <option value="Post avulso">Post avulso · legenda</option>
               <option value="Campanha">Campanha nova</option>
               <option value="SEO">SEO</option>
-              <option value="SugestÃ£o temas">SugestÃ£o de temas</option>
-              <option value="AnÃ¡lise performance">AnÃ¡lise de performance</option>
-              <option value="NotÃ­cia blog">MatÃ©ria para blog</option>
+              <option value="Sugestão temas">Sugestão de temas</option>
+              <option value="Análise performance">Análise de performance</option>
+              <option value="Notícia blog">Matéria para blog</option>
               <option value="Briefing SEO">Briefing SEO (pra Sherliany)</option>
-              <option value="EdiÃ§Ã£o curtos">EdiÃ§Ã£o vÃ­deos curtos</option>
-              <option value="EdiÃ§Ã£o longos">EdiÃ§Ã£o vÃ­deos longos</option>
+              <option value="Edição curtos">Edição vídeos curtos</option>
+              <option value="Edição longos">Edição vídeos longos</option>
               <option value="Agendamento">Agendamento</option>
-              <option value="CalendÃ¡rio mensal">CalendÃ¡rio mensal</option>
-              <option value="ConcorrÃªncia">AnÃ¡lise de concorrÃªncia</option>
+              <option value="Calendário mensal">Calendário mensal</option>
+              <option value="Concorrência">Análise de concorrência</option>
               <option value="Jornada ecossistema">Jornada ecossistema</option>
-              <option value="AnÃ¡lise funil">AnÃ¡lise de funil</option>
+              <option value="Análise funil">Análise de funil</option>
               <option value="Parceria/Imprensa">Parceria / Imprensa</option>
-              <option value="CRÃTICO crise">CRÃTICO Â· crise / urgente</option>
+              <option value="CRÍTICO crise">CRÍTICO · crise / urgente</option>
             </select>
           </div>
           <div class="field">
-            <label class="field-label">TÃ­tulo</label>
-            <input class="input" type="text" name="demanda" required maxlength="100" placeholder="Ex: Roteiro Aposentadoria Especial profissÃµes saÃºde">
+            <label class="field-label">Título</label>
+            <input class="input" type="text" name="demanda" required maxlength="100" placeholder="Ex: Roteiro Aposentadoria Especial profissões saúde">
           </div>
           <div class="field-group">
             <div class="field">
@@ -554,18 +662,18 @@
               <select class="select" name="prioridade">
                 <option value="Normal" selected>Normal</option>
                 <option value="Alto">Alto</option>
-                <option value="CrÃ­tico">CrÃ­tico</option>
+                <option value="Crítico">Crítico</option>
                 <option value="Baixo">Baixo</option>
               </select>
             </div>
           </div>
           <div class="field">
-            <label class="field-label">Quem estÃ¡ pedindo</label>
+            <label class="field-label">Quem está pedindo</label>
             <select class="select" name="solicitante">
-              <option value="AndrÃ© Beschizza">AndrÃ© Beschizza</option>
+              <option value="André Beschizza">André Beschizza</option>
               <option value="Matheus">Matheus</option>
               <option value="Equipe AB Group" selected>Equipe AB Group</option>
-              <option value="Zorks (SEO YT + EdiÃ§Ã£o)">Zorks (SEO YT + EdiÃ§Ã£o)</option>
+              <option value="Zorks (SEO YT + Edição)">Zorks (SEO YT + Edição)</option>
               <option value="Happyhour (SEO Blog)">Happyhour (SEO Blog)</option>
               <option value="Sherliany (Redatora)">Sherliany (Redatora)</option>
               <option value="Equipe Comercial">Equipe Comercial</option>
@@ -574,7 +682,7 @@
           </div>
           <div class="field">
             <label class="field-label">Briefing</label>
-            <textarea class="textarea" name="briefing" maxlength="2000" placeholder="PÃºblico, prazo, tom, referÃªncias, restriÃ§Ãµes..."></textarea>
+            <textarea class="textarea" name="briefing" maxlength="2000" placeholder="Público, prazo, tom, referências, restrições..."></textarea>
           </div>
           <div class="field-group">
             <div class="field">
@@ -593,7 +701,7 @@
         <div class="card-head">
           <div>
             <div class="card-title">Fila de demandas</div>
-            <div class="card-sub" id="demandas-count">â</div>
+            <div class="card-sub" id="demandas-count">—</div>
           </div>
         </div>
         <div id="demandas-list">
@@ -603,12 +711,57 @@
     </div>
   </section>
 
+  <!-- CALENDÁRIO -->
+  <section class="panel" id="panel-calendario">
+    <h1 class="page-title">Calendário Editorial</h1>
+    <p class="page-sub">Pipeline de vídeos e posts. Pauta → Gravado → Editando → Aprovado → Agendado → Publicado.</p>
+
+    <div class="cal-filters" id="cal-filters">
+      <select class="select cal-filter" data-filter="marca">
+        <option value="">Todas as marcas</option>
+        <option>ABADV</option>
+        <option>AposentaBR</option>
+        <option>AB CRED</option>
+        <option>Vitalidade+</option>
+      </select>
+      <select class="select cal-filter" data-filter="apresentador">
+        <option value="">Todos apresentadores</option>
+        <option>Dr. André</option>
+        <option>Dra. Luana</option>
+        <option>Dr. Cláudio</option>
+        <option>Dra. Meire</option>
+        <option>Dr. James</option>
+      </select>
+      <select class="select cal-filter" data-filter="plataforma">
+        <option value="">Todas plataformas</option>
+        <option>TikTok</option>
+        <option>Kwai</option>
+        <option>Instagram</option>
+        <option>YouTube Shorts</option>
+        <option>YouTube Longo</option>
+        <option>Live YouTube</option>
+      </select>
+      <select class="select cal-filter" data-filter="tipoConteudo">
+        <option value="">Todos tipos</option>
+        <option>Previdenciário</option>
+        <option>Trabalhista</option>
+        <option>Consumidor</option>
+      </select>
+      <button class="btn btn-secondary" id="btn-cal-reset">Limpar filtros</button>
+      <span class="cal-count" id="cal-count">—</span>
+    </div>
+
+    <div class="kanban" id="kanban">
+      <div class="loading"><div class="skeleton"></div><div class="skeleton" style="width:80%"></div></div>
+    </div>
+  </section>
+
   <!-- AGENTES -->
   <section class="panel" id="panel-agentes">
     <h1 class="page-title">Mapa do time</h1>
-    <p class="page-sub">16 agentes do sistema. Saiba quem aciona o quÃª â sem precisar do Telegram.</p>
+    <p class="page-sub">16 agentes do sistema. Saiba quem aciona o quê — sem precisar do Telegram.</p>
     <div id="agentes-grid" class="agentes-grid">
-      <div class="loading">Carregando agentesâ¦</div>
+      <div class="loading">Carregando agentes…</div>
     </div>
   </section>
 
@@ -617,28 +770,28 @@
     <h1 class="page-title">Sistemas conectados</h1>
     <p class="page-sub">Atalhos para todos os sistemas que o time usa no dia a dia.</p>
     <div id="atalhos-container">
-      <div class="loading">Carregando atalhosâ¦</div>
+      <div class="loading">Carregando atalhos…</div>
     </div>
   </section>
 
   <!-- ALERTAS -->
   <section class="panel" id="panel-alertas">
     <h1 class="page-title">Alertas</h1>
-    <p class="page-sub">O que precisa de atenÃ§Ã£o. Resolva e marque como concluÃ­do na planilha.</p>
+    <p class="page-sub">O que precisa de atenção. Resolva e marque como concluído na planilha.</p>
     <div class="card">
       <div class="card-head">
         <div>
           <div class="card-title">Criar alerta</div>
-          <div class="card-sub">Use quando algo crÃ­tico aparece no meio da semana</div>
+          <div class="card-sub">Use quando algo crítico aparece no meio da semana</div>
         </div>
       </div>
       <form class="form-grid" id="form-alerta">
         <div class="field">
-          <label class="field-label">TÃ­tulo</label>
+          <label class="field-label">Título</label>
           <input class="input" type="text" name="titulo" required maxlength="120" placeholder="Ex: Google Ads pagamento pendente">
         </div>
         <div class="field">
-          <label class="field-label">DescriÃ§Ã£o</label>
+          <label class="field-label">Descrição</label>
           <textarea class="textarea" name="descricao" maxlength="500"></textarea>
         </div>
         <div class="field-group">
@@ -646,12 +799,12 @@
             <label class="field-label">Severidade</label>
             <select class="select" name="severidade">
               <option value="alta">Alta</option>
-              <option value="media" selected>MÃ©dia</option>
+              <option value="media" selected>Média</option>
               <option value="baixa">Baixa</option>
             </select>
           </div>
           <div class="field">
-            <label class="field-label">ResponsÃ¡vel</label>
+            <label class="field-label">Responsável</label>
             <input class="input" type="text" name="responsavel" placeholder="Ex: Matheus">
           </div>
         </div>
@@ -672,18 +825,18 @@
 
 <script>
 (async () => {
-  // SaudaÃ§Ã£o dinÃ¢mica
+  // Saudação dinâmica
   function setGreeting() {
     const h = new Date().getHours();
     let g = 'Bom dia';
     if (h >= 12 && h < 18) g = 'Boa tarde';
     else if (h >= 18 || h < 5) g = 'Boa noite';
     document.getElementById('greeting').textContent = `${g}, time.`;
-    const dow = ['dom','seg','ter','qua','qui','sex','sÃ¡b'];
+    const dow = ['dom','seg','ter','qua','qui','sex','sáb'];
     const meses = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
     const d = new Date();
     document.getElementById('meta-time').textContent =
-      `${dow[d.getDay()]} Â· ${d.getDate()} ${meses[d.getMonth()]}`;
+      `${dow[d.getDay()]} · ${d.getDate()} ${meses[d.getMonth()]}`;
   }
   setGreeting();
 
@@ -728,19 +881,19 @@
     const el = document.getElementById('kpis');
     if (data.__error || !data.kpis || data.kpis.length === 0) {
       el.innerHTML = `
-        <div class="kpi"><div class="kpi-label">Leads</div><div class="kpi-value">â</div><div class="kpi-meta">Meta <strong>2.500</strong></div></div>
-        <div class="kpi"><div class="kpi-label">Qualificados</div><div class="kpi-value">â</div><div class="kpi-meta">Meta <strong>290</strong></div></div>
-        <div class="kpi"><div class="kpi-label">Contratos</div><div class="kpi-value">â</div><div class="kpi-meta">Meta <strong>155</strong></div></div>
-        <div class="kpi"><div class="kpi-label">ConversÃ£o</div><div class="kpi-value">â</div><div class="kpi-meta">Meta <strong>11,6%</strong></div></div>
+        <div class="kpi"><div class="kpi-label">Leads</div><div class="kpi-value">—</div><div class="kpi-meta">Meta <strong>2.500</strong></div></div>
+        <div class="kpi"><div class="kpi-label">Qualificados</div><div class="kpi-value">—</div><div class="kpi-meta">Meta <strong>290</strong></div></div>
+        <div class="kpi"><div class="kpi-label">Contratos</div><div class="kpi-value">—</div><div class="kpi-meta">Meta <strong>155</strong></div></div>
+        <div class="kpi"><div class="kpi-label">Conversão</div><div class="kpi-value">—</div><div class="kpi-meta">Meta <strong>11,6%</strong></div></div>
       `;
-      showSetupBanner('A aba "kpis" estÃ¡ vazia ou ainda nÃ£o foi criada na planilha. Crie ela com colunas <code>Indicador, Meta, Realizado, Unidade, Atualizado</code>.');
+      showSetupBanner('A aba "kpis" está vazia ou ainda não foi criada na planilha. Crie ela com colunas <code>Indicador, Meta, Realizado, Unidade, Atualizado</code>.');
       return;
     }
     el.innerHTML = data.kpis.map(k => `
       <div class="kpi ${k.status}">
         <div class="kpi-label">${escapeHtml(k.indicador)}</div>
         <div class="kpi-value">${formatNum(k.realizado)}${k.unidade ? '<span style="font-size:13px;color:var(--ink-mute);"> ' + escapeHtml(k.unidade) + '</span>' : ''}</div>
-        <div class="kpi-meta">Meta <strong>${formatNum(k.meta)}</strong> Â· ${k.pct}%</div>
+        <div class="kpi-meta">Meta <strong>${formatNum(k.meta)}</strong> · ${k.pct}%</div>
         <div class="kpi-bar"><div class="kpi-fill" style="width:${Math.min(100, k.pct)}%"></div></div>
       </div>
     `).join('');
@@ -757,7 +910,7 @@
     const resumo = document.getElementById('alertas-resumo');
     const lista = document.getElementById('alertas-list');
     if (data.__error || !data.alertas) {
-      resumo.innerHTML = '<div class="empty">NÃ£o foi possÃ­vel carregar alertas.</div>';
+      resumo.innerHTML = '<div class="empty">Não foi possível carregar alertas.</div>';
       lista.innerHTML = resumo.innerHTML;
       return;
     }
@@ -770,7 +923,7 @@
       <div class="alerta ${a.severidade}">
         <div class="alerta-title">${escapeHtml(a.titulo)}</div>
         <div class="alerta-desc">${escapeHtml(a.descricao || '')}</div>
-        <div class="alerta-meta">${escapeHtml(a.data || '')}${a.responsavel ? ' Â· ' + escapeHtml(a.responsavel) : ''}</div>
+        <div class="alerta-meta">${escapeHtml(a.data || '')}${a.responsavel ? ' · ' + escapeHtml(a.responsavel) : ''}</div>
       </div>
     `).join('');
     resumo.innerHTML = data.alertas.slice(0, 3).map(a => `
@@ -788,7 +941,7 @@
     const el = document.getElementById('demandas-list');
     const count = document.getElementById('demandas-count');
     if (data.__error || !data.demandas) {
-      el.innerHTML = '<div class="empty">NÃ£o foi possÃ­vel carregar demandas.</div>';
+      el.innerHTML = '<div class="empty">Não foi possível carregar demandas.</div>';
       return;
     }
     count.textContent = `${data.total} demanda${data.total !== 1 ? 's' : ''}`;
@@ -806,7 +959,7 @@
             ${d.empresa ? `<span class="chip">${escapeHtml(d.empresa)}</span>` : ''}
             ${d.status ? `<span class="chip chip-status">${escapeHtml(d.status)}</span>` : ''}
             <span>${escapeHtml(d.solicitante || '')}</span>
-            <span>Â·</span>
+            <span>·</span>
             <span>${escapeHtml(d.submetido || '')}</span>
           </div>
         </div>
@@ -819,7 +972,7 @@
     const data = await api('/api/agentes');
     const el = document.getElementById('agentes-grid');
     if (data.__error || !data.agentes) {
-      el.innerHTML = '<div class="empty">NÃ£o foi possÃ­vel carregar agentes.</div>';
+      el.innerHTML = '<div class="empty">Não foi possível carregar agentes.</div>';
       return;
     }
     el.innerHTML = data.agentes.map(a => `
@@ -840,11 +993,11 @@
     const data = await api('/api/atalhos');
     const el = document.getElementById('atalhos-container');
     if (data.__error || !data.grupos) {
-      el.innerHTML = '<div class="empty">NÃ£o foi possÃ­vel carregar atalhos.</div>';
+      el.innerHTML = '<div class="empty">Não foi possível carregar atalhos.</div>';
       return;
     }
     const grupos = data.grupos;
-    const ordem = ['AutomaÃ§Ã£o', 'PublicaÃ§Ã£o', 'AnÃºncios', 'Plataformas', 'Leads', 'SEO', 'Pesquisa', 'Analytics', 'MÃ­dia', 'Operacional', 'Outros'];
+    const ordem = ['Automação', 'Publicação', 'Anúncios', 'Plataformas', 'Leads', 'SEO', 'Pesquisa', 'Analytics', 'Mídia', 'Operacional', 'Outros'];
     const cats = Object.keys(grupos).sort((a, b) => {
       const ai = ordem.indexOf(a), bi = ordem.indexOf(b);
       return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
@@ -854,7 +1007,7 @@
       <div class="atalhos-grid">
         ${grupos[cat].map(a => `
           <a class="atalho" href="${escapeHtml(a.url)}" target="_blank" rel="noopener">
-            <span class="atalho-icon">${a.icon || 'ð'}</span>
+            <span class="atalho-icon">${a.icon || '🔗'}</span>
             <span class="atalho-name">${escapeHtml(a.nome)}</span>
           </a>
         `).join('')}
@@ -869,7 +1022,7 @@
     const btn = document.getElementById('btn-submit');
     const result = document.getElementById('form-result');
     const data = Object.fromEntries(new FormData(form).entries());
-    btn.disabled = true; btn.textContent = 'Enviandoâ¦';
+    btn.disabled = true; btn.textContent = 'Enviando…';
     result.innerHTML = '';
 
     const json = await api('/api/demandas', {
@@ -880,10 +1033,10 @@
 
     if (json.__error) {
       result.className = 'form-result error';
-      result.innerHTML = `â ${escapeHtml(json.__error)}`;
+      result.innerHTML = `✗ ${escapeHtml(json.__error)}`;
     } else {
       result.className = 'form-result success';
-      result.innerHTML = `â <strong>Demanda registrada.</strong> SequÃªncia: <code>${escapeHtml(json.sequencia || '')}</code>`;
+      result.innerHTML = `✓ <strong>Demanda registrada.</strong> Sequência: <code>${escapeHtml(json.sequencia || '')}</code>`;
       form.reset();
       loadDemandas();
     }
@@ -897,7 +1050,7 @@
     const btn = document.getElementById('btn-alerta');
     const result = document.getElementById('alerta-result');
     const data = Object.fromEntries(new FormData(form).entries());
-    btn.disabled = true; btn.textContent = 'Criandoâ¦';
+    btn.disabled = true; btn.textContent = 'Criando…';
 
     const json = await api('/api/alertas', {
       method: 'POST',
@@ -907,10 +1060,10 @@
 
     if (json.__error) {
       result.className = 'form-result error';
-      result.innerHTML = `â ${escapeHtml(json.__error)}`;
+      result.innerHTML = `✗ ${escapeHtml(json.__error)}`;
     } else {
       result.className = 'form-result success';
-      result.innerHTML = 'â Alerta criado.';
+      result.innerHTML = '✓ Alerta criado.';
       form.reset();
       loadAlertas();
     }
@@ -922,8 +1075,122 @@
     c.innerHTML = `<div class="setup-banner">${html}</div>`;
   }
 
+  // ===== CALENDÁRIO =====
+  let calendarioCache = null;
+
+  function calApplyFilters(items) {
+    const f = {};
+    document.querySelectorAll('.cal-filter').forEach(s => {
+      if (s.value) f[s.dataset.filter] = s.value;
+    });
+    return items.filter(i => {
+      if (f.marca && i.marca !== f.marca) return false;
+      if (f.apresentador && i.apresentador !== f.apresentador) return false;
+      if (f.tipoConteudo && i.tipoConteudo !== f.tipoConteudo) return false;
+      if (f.plataforma && !(i.plataformas || []).includes(f.plataforma)) return false;
+      return true;
+    });
+  }
+
+  function renderKanban(items, statusOrder) {
+    const el = document.getElementById('kanban');
+    document.getElementById('cal-count').textContent = `${items.length} ${items.length === 1 ? 'item' : 'items'}`;
+    if (items.length === 0) {
+      el.innerHTML = '<div class="empty" style="grid-column:1/-1;">Nenhum item bate com os filtros.</div>';
+      return;
+    }
+    const groups = {};
+    statusOrder.forEach(s => { groups[s] = []; });
+    items.forEach(i => {
+      const k = statusOrder.includes(i.status) ? i.status : 'Gravado';
+      groups[k].push(i);
+    });
+    el.innerHTML = statusOrder.map(status => {
+      const list = groups[status] || [];
+      const cards = list.length ? list.map(i => {
+        const dateLabel = i.dataPublicacao ? formatDateBr(i.dataPublicacao) : '';
+        return `
+          <div class="kanban-card" data-row="${i.row}" data-status="${escapeHtml(i.status)}">
+            ${dateLabel ? `<div class="kanban-card-date">${escapeHtml(dateLabel)}</div>` : ''}
+            <div class="kanban-card-title">${escapeHtml(i.titulo)}</div>
+            <div class="kanban-card-meta">
+              ${i.apresentador ? `<span class="chip">${escapeHtml(i.apresentador)}</span>` : ''}
+              ${i.tipoConteudo ? `<span class="chip">${escapeHtml(i.tipoConteudo)}</span>` : ''}
+              ${(i.plataformas || []).slice(0, 2).map(p => `<span class="chip">${escapeHtml(p)}</span>`).join('')}
+              ${i.plataformas && i.plataformas.length > 2 ? `<span class="chip">+${i.plataformas.length - 2}</span>` : ''}
+            </div>
+          </div>
+        `;
+      }).join('') : '<div class="kanban-empty">vazio</div>';
+      return `
+        <div class="kanban-col" data-status="${escapeHtml(status)}">
+          <div class="kanban-col-head">
+            <span>${escapeHtml(status)}</span>
+            <span class="kanban-col-count">${list.length}</span>
+          </div>
+          ${cards}
+        </div>
+      `;
+    }).join('');
+  }
+
+  function formatDateBr(iso) {
+    if (!iso) return '';
+    const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (!m) return iso;
+    const meses = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+    return `${parseInt(m[3],10)} ${meses[parseInt(m[2],10)-1]}`;
+  }
+
+  function renderPublicaBanner(publicaHoje, publicaAmanha) {
+    const c = document.getElementById('dashboard-banner-publica');
+    if ((publicaHoje?.length || 0) + (publicaAmanha?.length || 0) === 0) {
+      c.innerHTML = '';
+      return;
+    }
+    const items = [
+      ...(publicaHoje || []).map(i => ({ when: 'Hoje', ...i })),
+      ...(publicaAmanha || []).map(i => ({ when: 'Amanhã', ...i })),
+    ];
+    c.innerHTML = `
+      <div class="publica-banner">
+        <div class="publica-banner-title">📺 Publica nas próximas 48h · ${items.length} ${items.length === 1 ? 'item' : 'items'}</div>
+        <div class="publica-banner-list">
+          ${items.map(i => `
+            <div class="publica-banner-item">
+              <strong>${escapeHtml(i.when)}</strong> · ${escapeHtml(i.titulo)}${i.apresentador ? ' · ' + escapeHtml(i.apresentador) : ''}
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  }
+
+  async function loadCalendario() {
+    const data = await api('/api/calendario');
+    if (data.__error) {
+      document.getElementById('kanban').innerHTML = '<div class="empty" style="grid-column:1/-1;">Não foi possível carregar o calendário.</div>';
+      return;
+    }
+    calendarioCache = data;
+    renderKanban(data.items, data.statusOrder);
+    renderPublicaBanner(data.publicaHoje, data.publicaAmanha);
+  }
+
+  document.getElementById('cal-filters').addEventListener('change', (e) => {
+    if (!e.target.classList.contains('cal-filter')) return;
+    if (!calendarioCache) return;
+    const filtered = calApplyFilters(calendarioCache.items);
+    renderKanban(filtered, calendarioCache.statusOrder);
+  });
+
+  document.getElementById('btn-cal-reset').addEventListener('click', () => {
+    document.querySelectorAll('.cal-filter').forEach(s => s.value = '');
+    if (calendarioCache) renderKanban(calendarioCache.items, calendarioCache.statusOrder);
+  });
+
   // ===== BOOT =====
-  await Promise.all([loadKpis(), loadAlertas(), loadDemandas(), loadAgentes(), loadAtalhos()]);
+  await Promise.all([loadKpis(), loadAlertas(), loadDemandas(), loadAgentes(), loadAtalhos(), loadCalendario()]);
 })();
 </script>
 
