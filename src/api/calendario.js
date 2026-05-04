@@ -24,11 +24,20 @@ async function ensureTab() {
 
 // GET /api/calendario — lista todos os items, agrupado por status (para Pipeline kanban)
 // Query params: ?marca=ABADV&apresentador=Dr.+André&status=Editando
+// Se o perfil do usuário tem marca específica (ABADV/AposentaBR/AB CRED/Vitalidade+),
+// força o filtro por essa marca (perfil vertical só vê o que é dele).
 export async function listCalendario(req, res) {
   try {
     await ensureTab();
     const rows = await readSheet(TAB);
     const filter = req.query || {};
+
+    // Restrição automática por marca do perfil (vertical)
+    if (req.session?.perfil) {
+      const { PERFIS } = await import('../middleware/auth.js');
+      const conf = PERFIS[req.session.perfil];
+      if (conf && conf.marca) filter.marca = conf.marca;
+    }
 
     let items = rows
       .filter(r => r['Título'])
