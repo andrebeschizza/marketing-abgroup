@@ -572,6 +572,32 @@
     }
     .kanban-arrow:disabled { opacity: 0.3; cursor: not-allowed; }
     .kanban-arrow.loading { opacity: 0.5; cursor: wait; }
+
+    /* PERFIL BADGE NO TOPBAR */
+    .perfil-badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 3px 9px;
+      background: var(--accent-soft); color: var(--accent-deep);
+      border-radius: 999px;
+      font-size: 11px; font-weight: 600;
+    }
+    .perfil-badge.readonly { background: var(--bg-subtle); color: var(--ink-soft); }
+    .perfil-badge.readonly::before { content: '👁 '; }
+
+    /* READ-ONLY: esconder botões de ação */
+    body.is-readonly .kanban-card-actions { display: none !important; }
+    body.is-readonly #form-demanda { display: none !important; }
+    body.is-readonly #form-alerta { display: none !important; }
+    body.is-readonly .readonly-hide { display: none !important; }
+    body.is-readonly .readonly-banner {
+      display: block !important;
+      background: var(--bg-subtle); color: var(--ink-soft);
+      border: 1px solid var(--border);
+      border-radius: var(--r-sm);
+      padding: 10px 14px; font-size: 12px;
+      margin-bottom: 14px;
+    }
+    .readonly-banner { display: none; }
   </style>
 </head>
 <body>
@@ -584,6 +610,7 @@
     </div>
     <div class="topbar-meta">
       <span class="meta-time" id="meta-time">—</span>
+      <span class="perfil-badge" id="perfil-badge" style="display:none;"></span>
       <span><span class="dot"></span><span id="status-label">Online</span></span>
       <button class="logout" id="btn-logout">Sair</button>
     </div>
@@ -1252,6 +1279,34 @@
   });
 
   // ===== BOOT =====
+  // Verifica autenticação ANTES de carregar dados.
+  // Se sessão expirou (401), redireciona para /login imediatamente.
+  async function loadMe() {
+    const res = await fetch('/api/me');
+    if (res.status === 401 || res.status === 403) {
+      window.location.href = '/login';
+      throw new Error('not authenticated');
+    }
+    const me = await res.json();
+    if (!me.authenticated) {
+      window.location.href = '/login';
+      throw new Error('not authenticated');
+    }
+    const badge = document.getElementById('perfil-badge');
+    if (badge) {
+      badge.style.display = 'inline-flex';
+      badge.textContent = me.perfilLabel || 'Marketing';
+      if (me.admin === false) {
+        document.body.classList.add('is-readonly');
+        badge.classList.add('readonly');
+      }
+    }
+  }
+  try {
+    await loadMe();
+  } catch (e) {
+    return; // Já redirecionado
+  }
   await Promise.all([loadKpis(), loadAlertas(), loadDemandas(), loadAgentes(), loadAtalhos(), loadCalendario()]);
 })();
 </script>
