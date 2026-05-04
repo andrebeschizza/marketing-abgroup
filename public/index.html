@@ -548,6 +548,30 @@
       color: var(--ink-soft);
     }
     .publica-banner-item strong { color: var(--ink); font-weight: 600; }
+
+    /* MOVE BUTTONS NO KANBAN */
+    .kanban-card-actions {
+      display: flex; gap: 6px; margin-top: 8px;
+      padding-top: 8px; border-top: 1px solid var(--border);
+    }
+    .kanban-arrow {
+      flex: 1; padding: 4px 6px;
+      background: var(--bg-subtle);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      font-size: 11px; font-weight: 600;
+      color: var(--ink-soft);
+      cursor: pointer;
+      transition: all 0.12s;
+      font-family: inherit;
+    }
+    .kanban-arrow:hover:not(:disabled) {
+      background: var(--accent-soft);
+      color: var(--accent-deep);
+      border-color: var(--accent);
+    }
+    .kanban-arrow:disabled { opacity: 0.3; cursor: not-allowed; }
+    .kanban-arrow.loading { opacity: 0.5; cursor: wait; }
   </style>
 </head>
 <body>
@@ -1109,6 +1133,9 @@
       const list = groups[status] || [];
       const cards = list.length ? list.map(i => {
         const dateLabel = i.dataPublicacao ? formatDateBr(i.dataPublicacao) : '';
+        const idx = statusOrder.indexOf(i.status);
+        const prevStatus = idx > 0 ? statusOrder[idx - 1] : null;
+        const nextStatus = idx >= 0 && idx < statusOrder.length - 1 ? statusOrder[idx + 1] : null;
         return `
           <div class="kanban-card" data-row="${i.row}" data-status="${escapeHtml(i.status)}">
             ${dateLabel ? `<div class="kanban-card-date">${escapeHtml(dateLabel)}</div>` : ''}
@@ -1118,6 +1145,10 @@
               ${i.tipoConteudo ? `<span class="chip">${escapeHtml(i.tipoConteudo)}</span>` : ''}
               ${(i.plataformas || []).slice(0, 2).map(p => `<span class="chip">${escapeHtml(p)}</span>`).join('')}
               ${i.plataformas && i.plataformas.length > 2 ? `<span class="chip">+${i.plataformas.length - 2}</span>` : ''}
+            </div>
+            <div class="kanban-card-actions">
+              <button class="kanban-arrow" data-action="back" data-row="${i.row}" data-target="${escapeHtml(prevStatus || '')}" ${prevStatus ? `title="Voltar para ${escapeHtml(prevStatus)}"` : ''} ${prevStatus ? '' : 'disabled'}>← Voltar</button>
+              <button class="kanban-arrow" data-action="fwd" data-row="${i.row}" data-target="${escapeHtml(nextStatus || '')}" ${nextStatus ? `title="Avançar para ${escapeHtml(nextStatus)}"` : ''} ${nextStatus ? '' : 'disabled'}>Avançar →</button>
             </div>
           </div>
         `;
@@ -1187,6 +1218,37 @@
   document.getElementById('btn-cal-reset').addEventListener('click', () => {
     document.querySelectorAll('.cal-filter').forEach(s => s.value = '');
     if (calendarioCache) renderKanban(calendarioCache.items, calendarioCache.statusOrder);
+  });
+
+  // Move status (← / → buttons in kanban cards)
+  document.getElementById('kanban').addEventListener('click', async (e) => {
+    const btn = e.target.closest('.kanban-arrow');
+    if (!btn || btn.disabled) return;
+    const row = parseInt(btn.dataset.row, 10);
+    const target = btn.dataset.target;
+    if (!row || !target) return;
+    btn.disabled = true;
+    btn.classList.add('loading');
+    try {
+      const res = await fetch(`/api/calendario/${row}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: target }),
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok || !j.ok) {
+        alert('Não foi possível mover: ' + (j.error || res.status));
+        btn.disabled = false;
+        btn.classList.remove('loading');
+        return;
+      }
+      // Reload calendário
+      await loadCalendario();
+    } catch (err) {
+      alert('Erro: ' + err.message);
+      btn.disabled = false;
+      btn.classList.remove('loading');
+    }
   });
 
   // ===== BOOT =====
