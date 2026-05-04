@@ -6,25 +6,112 @@
   <title>Login · Marketing AB Group</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%231B9C85'/%3E%3Ctext x='16' y='22' font-family='Arial' font-size='16' font-weight='800' fill='white' text-anchor='middle'%3EAB%3C/text%3E%3C/svg%3E">
   <style>
-    :root { color-scheme: light; --bg: #FAFAF8; --card: #FFFFFF; --border: #EAEAE5; --border-strong: #D4D4CF; --ink: #0A0A0A; --ink-soft: #525252; --ink-mute: #8B8B85; --accent: #1B9C85; --accent-soft: #E6F4F0; --danger: #B91C1C; --danger-soft: #FEE2E2; }
+    :root {
+      color-scheme: light;
+      --bg: #FAFAF8;
+      --card: #FFFFFF;
+      --border: #EAEAE5;
+      --border-strong: #D4D4CF;
+      --ink: #0A0A0A;
+      --ink-soft: #525252;
+      --ink-mute: #8B8B85;
+      --accent: #1B9C85;
+      --accent-soft: #E6F4F0;
+      --danger: #B91C1C;
+      --danger-soft: #FEE2E2;
+    }
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { background: var(--bg); color: var(--ink); font-family: -apple-system, BlinkMacSystemFont, 'Inter', system-ui, sans-serif; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; letter-spacing: -0.005em; }
-    .card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 40px 32px 32px; width: 100%; max-width: 420px; box-shadow: 0 4px 24px rgba(0,0,0,0.04); }
-    .brand { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; }
-    .brand-mark { width: 36px; height: 36px; background: var(--accent); border-radius: 9px; display: flex; align-items: center; justify-content: center; color: white; font-weight: 800; font-size: 14px; letter-spacing: 0.04em; }
+    html, body {
+      background: var(--bg);
+      color: var(--ink);
+      font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', system-ui, sans-serif;
+      min-height: 100vh;
+      display: flex; align-items: center; justify-content: center;
+      padding: 24px;
+      letter-spacing: -0.005em;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 40px 32px 32px;
+      width: 100%; max-width: 420px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.04);
+    }
+    .brand {
+      display: flex; align-items: center; gap: 12px;
+      margin-bottom: 24px;
+    }
+    .brand-mark {
+      width: 36px; height: 36px;
+      background: var(--accent); border-radius: 9px;
+      display: flex; align-items: center; justify-content: center;
+      color: white; font-weight: 800; font-size: 14px; letter-spacing: 0.04em;
+    }
     .brand-text { font-size: 14px; font-weight: 600; }
     .brand-text small { color: var(--ink-mute); font-weight: 500; display: block; font-size: 12px; }
-    h1 { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.2; margin-bottom: 6px; }
-    .sub { font-size: 14px; color: var(--ink-soft); margin-bottom: 24px; }
-    label { display: block; font-size: 11px; font-weight: 600; color: var(--ink-soft); letter-spacing: 0.04em; text-transform: uppercase; margin-bottom: 6px; }
-    input[type="password"] { width: 100%; padding: 12px 14px; border: 1px solid var(--border-strong); border-radius: 8px; font-family: inherit; font-size: 14px; background: var(--card); color: var(--ink); transition: all 0.15s; }
-    input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
-    button { width: 100%; margin-top: 16px; padding: 12px 18px; background: var(--ink); color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit; transition: opacity 0.15s; }
+    h1 {
+      font-size: 22px; font-weight: 700;
+      letter-spacing: -0.02em; line-height: 1.2;
+      margin-bottom: 6px;
+    }
+    .sub {
+      font-size: 14px; color: var(--ink-soft);
+      margin-bottom: 24px;
+    }
+    label {
+      display: block; font-size: 11px; font-weight: 600;
+      color: var(--ink-soft); letter-spacing: 0.04em;
+      text-transform: uppercase; margin-bottom: 6px;
+    }
+    input[type="password"] {
+      width: 100%;
+      padding: 12px 14px;
+      border: 1px solid var(--border-strong);
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 14px;
+      background: var(--card);
+      color: var(--ink);
+      transition: all 0.15s;
+    }
+    input:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-soft);
+    }
+    button {
+      width: 100%;
+      margin-top: 16px;
+      padding: 12px 18px;
+      background: var(--ink);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px; font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      transition: opacity 0.15s;
+    }
     button:hover { opacity: 0.92; }
     button:disabled { opacity: 0.5; cursor: not-allowed; }
-    .err { margin-top: 14px; padding: 10px 12px; background: var(--danger-soft); color: var(--danger); border: 1px solid rgba(185,28,28,0.2); border-radius: 8px; font-size: 13px; display: none; }
+    .err {
+      margin-top: 14px;
+      padding: 10px 12px;
+      background: var(--danger-soft);
+      color: var(--danger);
+      border: 1px solid rgba(185,28,28,0.2);
+      border-radius: 8px;
+      font-size: 13px;
+      display: none;
+    }
     .err.show { display: block; }
-    .foot { margin-top: 24px; text-align: center; font-size: 11px; color: var(--ink-mute); }
+    .foot {
+      margin-top: 24px;
+      text-align: center;
+      font-size: 11px;
+      color: var(--ink-mute);
+    }
   </style>
 </head>
 <body>
@@ -33,33 +120,63 @@
       <span class="brand-mark">AB</span>
       <span class="brand-text">Marketing AB Group<small>Plataforma do time</small></span>
     </div>
+
     <h1>Entrar</h1>
-    <p class="sub">Senha compartilhada do time AB Group.</p>
+    <p class="sub">Selecione seu perfil e digite a senha.</p>
+
     <form id="login-form">
+      <label for="perfil">Perfil</label>
+      <select id="perfil" name="perfil" required style="width:100%;padding:12px 14px;border:1px solid var(--border-strong);border-radius:8px;font-family:inherit;font-size:14px;background:var(--card);color:var(--ink);margin-bottom:14px;">
+        <option value="">Carregando perfis…</option>
+      </select>
       <label for="password">Senha</label>
       <input type="password" id="password" name="password" autofocus required autocomplete="current-password">
       <button type="submit" id="btn">Entrar</button>
       <div class="err" id="err"></div>
     </form>
+
     <p class="foot">Em caso de dúvida, contate o Diretor de Marketing.</p>
   </div>
+
   <script>
     const form = document.getElementById('login-form');
     const btn = document.getElementById('btn');
     const err = document.getElementById('err');
+    const perfilSel = document.getElementById('perfil');
+
+    // Carrega lista de perfis
+    fetch('/api/perfis')
+      .then(r => r.json())
+      .then(data => {
+        const lastPerfil = localStorage.getItem('ab_last_perfil') || 'mkt';
+        perfilSel.innerHTML = (data.perfis || []).map(p =>
+          `<option value="${p.key}" ${p.key === lastPerfil ? 'selected' : ''}>${p.label}${p.admin ? ' (admin)' : ''}</option>`
+        ).join('');
+      })
+      .catch(() => {
+        perfilSel.innerHTML = '<option value="mkt">Marketing (admin)</option>';
+      });
+
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
       err.classList.remove('show');
       btn.disabled = true;
       btn.textContent = 'Entrando…';
+
       try {
+        const perfil = perfilSel.value;
         const res = await fetch('/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ password: document.getElementById('password').value }),
+          body: JSON.stringify({
+            perfil,
+            password: document.getElementById('password').value,
+          }),
         });
         const json = await res.json();
         if (!res.ok) throw new Error(json.error || 'Erro ao entrar');
+        // Lembra perfil pra próxima visita
+        try { localStorage.setItem('ab_last_perfil', perfil); } catch (e) {}
         window.location.href = '/';
       } catch (e) {
         err.textContent = e.message;
