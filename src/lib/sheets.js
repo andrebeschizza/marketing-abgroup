@@ -159,6 +159,36 @@ export async function createTab(tabName, headers) {
   return { ok: true };
 }
 
+// Deleta uma linha (rowNumber é 1-based, header é linha 1)
+export async function deleteRow(tabName, rowNumber) {
+  const sheets = getClient();
+  // Precisa do sheetId numérico (não o tabName) pra batchUpdate
+  const meta = await sheets.spreadsheets.get({
+    spreadsheetId: SHEET_ID(),
+    fields: 'sheets.properties',
+  });
+  const target = (meta.data.sheets || []).find(s => s.properties.title === tabName);
+  if (!target) throw new Error(`Aba "${tabName}" não encontrada`);
+  const sheetId = target.properties.sheetId;
+
+  await sheets.spreadsheets.batchUpdate({
+    spreadsheetId: SHEET_ID(),
+    requestBody: {
+      requests: [{
+        deleteDimension: {
+          range: {
+            sheetId,
+            dimension: 'ROWS',
+            startIndex: rowNumber - 1, // 0-based
+            endIndex: rowNumber,
+          },
+        },
+      }],
+    },
+  });
+  return { ok: true };
+}
+
 // Status de saúde do client (pra healthz)
 export async function ping() {
   const hasCreds = !!(process.env.GOOGLE_SA_KEY_B64 || process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
