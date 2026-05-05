@@ -1,5 +1,5 @@
 // /api/calendario — Pipeline editorial de vídeos (Sprint 2)
-import { readSheet, appendRow, updateRow, listTabs, createTab } from '../lib/sheets.js';
+import { readSheet, appendRow, updateRow, deleteRow, listTabs, createTab } from '../lib/sheets.js';
 import { notionQueryAll, notionPageToCalendarRow, CALENDARIO_HEADERS } from '../lib/notion.js';
 import { notify } from './notificacoes.js';
 
@@ -167,6 +167,35 @@ export async function updateCalendarioItem(req, res) {
       url: '/#calendario',
       para: 'mkt',
       marca: target['Marca'] || '',
+    });
+
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+}
+
+// DELETE /api/calendario/:row — remove item do calendário (Sheets)
+export async function deleteCalendarioItem(req, res) {
+  const row = parseInt(req.params.row, 10);
+  if (!row) return res.status(400).json({ error: 'row obrigatório' });
+  try {
+    await ensureTab();
+    const rows = await readSheet(TAB);
+    const target = rows.find(r => r.__row === row);
+    if (!target) return res.status(404).json({ error: 'Item não encontrado' });
+    const titulo = target['Título'] || 'Item';
+    const marca = target['Marca'] || '';
+
+    await deleteRow(TAB, row);
+
+    notify({
+      tipo: 'calendario_deletado',
+      titulo: `${titulo} deletado`,
+      detalhe: 'Card removido do calendário',
+      url: '/#calendario',
+      para: 'mkt',
+      marca,
     });
 
     res.json({ ok: true });
