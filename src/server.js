@@ -13,7 +13,7 @@ import { listDemandas, createDemanda, updateDemandaStatus } from './api/demandas
 import { listAgentes } from './api/agentes.js';
 import { listAlertas, createAlerta } from './api/alertas.js';
 import { listAtalhos } from './api/atalhos.js';
-import { listCalendario, createCalendarioItem, updateCalendarioItem, updateCalendarioStatus, migrateFromNotion } from './api/calendario.js';
+import { listCalendario, createCalendarioItem, updateCalendarioItem, updateCalendarioStatus, deleteCalendarioItem, migrateFromNotion } from './api/calendario.js';
 import { listNotificacoes, createNotificacao, marcarLida, marcarTodasLidas } from './api/notificacoes.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -130,6 +130,7 @@ app.get('/api/calendario', listCalendario);
 app.post('/api/calendario', requireAdmin, createCalendarioItem);
 app.patch('/api/calendario/:row/status', requireAdmin, updateCalendarioStatus);
 app.patch('/api/calendario/:row', requireAdmin, updateCalendarioItem);
+app.delete('/api/calendario/:row', requireAdmin, deleteCalendarioItem);
 app.post('/api/calendario/migrate-from-notion', requireAdmin, migrateFromNotion);
 
 // Notificações in-app (substitui Telegram)
