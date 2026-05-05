@@ -666,6 +666,66 @@
       margin-bottom: 14px;
     }
     .readonly-banner { display: none; }
+
+    /* MODAL CARD EDIT */
+    .modal-overlay {
+      position: fixed; inset: 0;
+      background: rgba(10, 10, 10, 0.55);
+      backdrop-filter: blur(2px);
+      z-index: 200;
+      display: none; align-items: center; justify-content: center;
+      padding: 20px;
+    }
+    .modal-overlay.show { display: flex; }
+    .modal {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--r-lg);
+      width: 100%; max-width: 640px;
+      max-height: 90vh; overflow-y: auto;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.18);
+    }
+    .modal-head {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 18px 22px;
+      border-bottom: 1px solid var(--border);
+    }
+    .modal-title { font-size: 15px; font-weight: 700; }
+    .modal-close {
+      width: 28px; height: 28px;
+      border: none; background: transparent; cursor: pointer;
+      font-size: 18px; color: var(--ink-mute);
+      border-radius: 6px;
+    }
+    .modal-close:hover { background: var(--bg-subtle); color: var(--ink); }
+    .modal-body { padding: 18px 22px; display: grid; gap: 12px; }
+    .modal-body .field-group { grid-template-columns: 1fr 1fr; }
+    .modal-foot {
+      display: flex; justify-content: flex-end; gap: 8px;
+      padding: 14px 22px;
+      border-top: 1px solid var(--border);
+      background: var(--bg-subtle);
+      border-radius: 0 0 var(--r-lg) var(--r-lg);
+    }
+    .modal-result {
+      font-size: 12px; padding: 8px 12px;
+      border-radius: var(--r-sm); margin: 0 22px;
+    }
+    .modal-result.success { background: var(--accent-soft); color: var(--accent-deep); }
+    .modal-result.error { background: var(--danger-soft); color: var(--danger); }
+
+    /* DRAG-AND-DROP do kanban */
+    .kanban-card { user-select: none; }
+    .kanban-card.dragging { opacity: 0.4; cursor: grabbing; }
+    .kanban-col.drag-over {
+      background: var(--accent-soft);
+      border-color: var(--accent);
+    }
+    .kanban-col.drag-over .kanban-col-head { color: var(--accent-deep); }
+    @media (hover: hover) {
+      .kanban-card { cursor: grab; }
+    }
+    body.is-readonly .kanban-card { cursor: default; }
   </style>
 </head>
 <body>
@@ -953,6 +1013,92 @@
   </section>
 
 </main>
+
+<!-- MODAL EDIÇÃO CARD KANBAN -->
+<div class="modal-overlay" id="modal-card">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="modal-head">
+      <span class="modal-title" id="modal-title">Editar card</span>
+      <button class="modal-close" id="modal-close" aria-label="Fechar">×</button>
+    </div>
+    <form id="modal-form">
+      <div class="modal-body">
+        <div class="field">
+          <label class="field-label">Título</label>
+          <input class="input" type="text" name="titulo" required maxlength="200">
+        </div>
+        <div class="field-group">
+          <div class="field">
+            <label class="field-label">Marca</label>
+            <select class="select" name="marca">
+              <option value="ABADV">ABADV</option>
+              <option value="AposentaBR">AposentaBR</option>
+              <option value="AB CRED">AB CRED</option>
+              <option value="Vitalidade+">Vitalidade+</option>
+            </select>
+          </div>
+          <div class="field">
+            <label class="field-label">Tipo Conteúdo</label>
+            <select class="select" name="tipoConteudo">
+              <option value="">—</option>
+              <option value="Previdenciário">Previdenciário</option>
+              <option value="Trabalhista">Trabalhista</option>
+              <option value="Consumidor">Consumidor</option>
+            </select>
+          </div>
+        </div>
+        <div class="field-group">
+          <div class="field">
+            <label class="field-label">Apresentador</label>
+            <select class="select" name="apresentador">
+              <option value="">—</option>
+              <option value="Dr. André">Dr. André</option>
+              <option value="Dra. Luana">Dra. Luana</option>
+              <option value="Dr. Cláudio">Dr. Cláudio</option>
+              <option value="Dra. Meire">Dra. Meire</option>
+              <option value="Dr. James">Dr. James</option>
+            </select>
+          </div>
+          <div class="field">
+            <label class="field-label">Plataformas (separe por vírgula)</label>
+            <input class="input" type="text" name="plataformas" placeholder="TikTok, Kwai, Instagram, YouTube Shorts">
+          </div>
+        </div>
+        <div class="field-group">
+          <div class="field">
+            <label class="field-label">Data Publicação</label>
+            <input class="input" type="date" name="dataPublicacao">
+          </div>
+          <div class="field">
+            <label class="field-label">Mês</label>
+            <input class="input" type="text" name="mes" placeholder="ex: maio/2026">
+          </div>
+        </div>
+        <div class="field">
+          <label class="field-label">Link Drive Raw</label>
+          <input class="input" type="url" name="linkDriveRaw" placeholder="https://drive.google.com/...">
+        </div>
+        <div class="field">
+          <label class="field-label">Link Drive Editado</label>
+          <input class="input" type="url" name="linkDriveEditado" placeholder="https://drive.google.com/...">
+        </div>
+        <div class="field">
+          <label class="field-label">Link Publicação</label>
+          <input class="input" type="url" name="linkPublicacao" placeholder="https://instagram.com/p/...">
+        </div>
+        <div class="field">
+          <label class="field-label">Notas</label>
+          <textarea class="textarea" name="notas" maxlength="1500"></textarea>
+        </div>
+      </div>
+      <div id="modal-result"></div>
+      <div class="modal-foot">
+        <button type="button" class="btn btn-secondary" id="modal-cancel">Cancelar</button>
+        <button type="submit" class="btn" id="modal-save">Salvar alterações</button>
+      </div>
+    </form>
+  </div>
+</div>
 
 <script>
 (async () => {
@@ -1244,7 +1390,7 @@
         const prevStatus = idx > 0 ? statusOrder[idx - 1] : null;
         const nextStatus = idx >= 0 && idx < statusOrder.length - 1 ? statusOrder[idx + 1] : null;
         return `
-          <div class="kanban-card" data-row="${i.row}" data-status="${escapeHtml(i.status)}">
+          <div class="kanban-card" data-row="${i.row}" data-status="${escapeHtml(i.status)}" draggable="true">
             ${dateLabel ? `<div class="kanban-card-date">${escapeHtml(dateLabel)}</div>` : ''}
             <div class="kanban-card-title">${escapeHtml(i.titulo)}</div>
             <div class="kanban-card-meta">
@@ -1355,6 +1501,140 @@
       alert('Erro: ' + err.message);
       btn.disabled = false;
       btn.classList.remove('loading');
+    }
+  });
+
+  // ===== MODAL EDIÇÃO + DRAG-AND-DROP =====
+  const modal = document.getElementById('modal-card');
+  const modalForm = document.getElementById('modal-form');
+  const modalResult = document.getElementById('modal-result');
+  const modalSave = document.getElementById('modal-save');
+  let modalRow = null;
+
+  function openCardModal(row) {
+    if (document.body.classList.contains('is-readonly')) return;
+    if (!calendarioCache) return;
+    const item = calendarioCache.items.find(i => i.row === row);
+    if (!item) return;
+    modalRow = row;
+    modalForm.titulo.value = item.titulo || '';
+    modalForm.marca.value = item.marca || 'ABADV';
+    modalForm.tipoConteudo.value = item.tipoConteudo || '';
+    modalForm.apresentador.value = item.apresentador || '';
+    modalForm.plataformas.value = (item.plataformas || []).join(', ');
+    modalForm.dataPublicacao.value = (item.dataPublicacao || '').slice(0, 10);
+    modalForm.mes.value = item.mes || '';
+    modalForm.linkDriveRaw.value = item.linkDriveRaw || '';
+    modalForm.linkDriveEditado.value = item.linkDriveEditado || '';
+    modalForm.linkPublicacao.value = item.linkPublicacao || '';
+    modalForm.notas.value = item.notas || '';
+    modalResult.innerHTML = '';
+    modalResult.className = '';
+    modal.classList.add('show');
+    setTimeout(() => modalForm.titulo.focus(), 100);
+  }
+
+  function closeCardModal() {
+    modal.classList.remove('show');
+    modalRow = null;
+  }
+
+  document.getElementById('modal-close').addEventListener('click', closeCardModal);
+  document.getElementById('modal-cancel').addEventListener('click', closeCardModal);
+  modal.addEventListener('click', (e) => { if (e.target === modal) closeCardModal(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && modal.classList.contains('show')) closeCardModal(); });
+
+  modalForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!modalRow) return;
+    const data = Object.fromEntries(new FormData(modalForm).entries());
+    if (data.plataformas) {
+      data.plataformas = data.plataformas.split(',').map(s => s.trim()).filter(Boolean);
+    } else {
+      data.plataformas = [];
+    }
+    modalSave.disabled = true; modalSave.textContent = 'Salvando…';
+    modalResult.className = ''; modalResult.innerHTML = '';
+    try {
+      const res = await fetch(`/api/calendario/${modalRow}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok || !j.ok) throw new Error(j.error || 'HTTP ' + res.status);
+      modalResult.className = 'modal-result success';
+      modalResult.innerHTML = '✓ Card atualizado.';
+      await loadCalendario();
+      setTimeout(closeCardModal, 600);
+    } catch (err) {
+      modalResult.className = 'modal-result error';
+      modalResult.innerHTML = '✗ ' + escapeHtml(err.message);
+    }
+    modalSave.disabled = false; modalSave.textContent = 'Salvar alterações';
+  });
+
+  // Click no card (que não seja em botão) abre modal
+  document.getElementById('kanban').addEventListener('click', (e) => {
+    if (e.target.closest('.kanban-arrow')) return;
+    const card = e.target.closest('.kanban-card');
+    if (!card) return;
+    const row = parseInt(card.dataset.row, 10);
+    if (row) openCardModal(row);
+  });
+
+  // Drag-and-drop entre colunas
+  let draggedRow = null;
+  document.getElementById('kanban').addEventListener('dragstart', (e) => {
+    if (document.body.classList.contains('is-readonly')) { e.preventDefault(); return; }
+    const card = e.target.closest('.kanban-card');
+    if (!card) return;
+    draggedRow = parseInt(card.dataset.row, 10);
+    card.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', String(draggedRow));
+  });
+  document.getElementById('kanban').addEventListener('dragend', (e) => {
+    const card = e.target.closest('.kanban-card');
+    if (card) card.classList.remove('dragging');
+    document.querySelectorAll('.kanban-col.drag-over').forEach(c => c.classList.remove('drag-over'));
+    draggedRow = null;
+  });
+  document.getElementById('kanban').addEventListener('dragover', (e) => {
+    const col = e.target.closest('.kanban-col');
+    if (!col) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    document.querySelectorAll('.kanban-col.drag-over').forEach(c => { if (c !== col) c.classList.remove('drag-over'); });
+    col.classList.add('drag-over');
+  });
+  document.getElementById('kanban').addEventListener('dragleave', (e) => {
+    const col = e.target.closest('.kanban-col');
+    if (col && !col.contains(e.relatedTarget)) col.classList.remove('drag-over');
+  });
+  document.getElementById('kanban').addEventListener('drop', async (e) => {
+    e.preventDefault();
+    const col = e.target.closest('.kanban-col');
+    if (!col || !draggedRow) return;
+    const targetStatus = col.dataset.status;
+    col.classList.remove('drag-over');
+    if (!targetStatus) return;
+    const item = calendarioCache?.items?.find(i => i.row === draggedRow);
+    if (item && item.status === targetStatus) return;
+    try {
+      const res = await fetch(`/api/calendario/${draggedRow}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: targetStatus }),
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok || !j.ok) {
+        alert('Não foi possível mover: ' + (j.error || res.status));
+        return;
+      }
+      await loadCalendario();
+    } catch (err) {
+      alert('Erro: ' + err.message);
     }
   });
 
