@@ -124,6 +124,57 @@ export async function createCalendarioItem(req, res) {
   }
 }
 
+// PATCH /api/calendario/:row — atualiza qualquer campo do item (modal de edição)
+const FIELD_MAP = {
+  titulo: 'Título',
+  marca: 'Marca',
+  tipoConteudo: 'Tipo Conteúdo',
+  apresentador: 'Apresentador',
+  plataformas: 'Plataformas',
+  dataPublicacao: 'Data Publicação',
+  mes: 'Mês',
+  linkDriveRaw: 'Link Drive Raw',
+  linkDriveEditado: 'Link Drive Editado',
+  linkPublicacao: 'Link Publicação',
+  notas: 'Notas',
+};
+
+export async function updateCalendarioItem(req, res) {
+  const row = parseInt(req.params.row, 10);
+  if (!row) return res.status(400).json({ error: 'row obrigatório' });
+  const body = req.body || {};
+
+  try {
+    await ensureTab();
+    const rows = await readSheet(TAB);
+    const target = rows.find(r => r.__row === row);
+    if (!target) return res.status(404).json({ error: 'Item não encontrado' });
+
+    // Aplica somente campos vindos no body (PATCH parcial)
+    for (const [key, sheetCol] of Object.entries(FIELD_MAP)) {
+      if (Object.prototype.hasOwnProperty.call(body, key)) {
+        const val = body[key];
+        target[sheetCol] = Array.isArray(val) ? val.join(', ') : (val == null ? '' : String(val));
+      }
+    }
+    target['Atualizado em'] = new Date().toISOString();
+    await updateRow(TAB, row, target);
+
+    notify({
+      tipo: 'calendario_editado',
+      titulo: `${target['Título'] || 'Item'} editado`,
+      detalhe: 'Card atualizado pelo kanban',
+      url: '/#calendario',
+      para: 'mkt',
+      marca: target['Marca'] || '',
+    });
+
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+}
+
 // PATCH /api/calendario/:row/status — muda status (mover no kanban)
 export async function updateCalendarioStatus(req, res) {
   const row = parseInt(req.params.row, 10);
