@@ -161,5 +161,5 @@ app.use((err, req, res, next) => {
 
 app.listen(PORT, () => {
   console.log(`Marketing AB Group rodando em http://localhost:${PORT}`);
-  console.log(`Health: http://localhost:${PORT}/healthz@);
+  console.log(`Health: http://localhost:${PORT}/healthz`);
 });
