@@ -732,6 +732,30 @@
       .kanban-card { cursor: grab; }
     }
     body.is-readonly .kanban-card { cursor: default; }
+
+    /* CHECKBOX GROUP (plataformas) */
+    .checkbox-group {
+      display: flex; flex-wrap: wrap; gap: 8px;
+    }
+    .checkbox-chip {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 8px 12px;
+      border: 1px solid var(--border-strong);
+      border-radius: 999px;
+      background: var(--bg-card);
+      font-size: 12px; color: var(--ink-soft);
+      cursor: pointer;
+      user-select: none;
+      transition: all 0.12s;
+    }
+    .checkbox-chip:hover { border-color: var(--accent); }
+    .checkbox-chip input { margin: 0; cursor: pointer; }
+    .checkbox-chip.checked {
+      background: var(--accent-soft);
+      color: var(--accent-deep);
+      border-color: var(--accent);
+      font-weight: 600;
+    }
   </style>
 </head>
 <body>
@@ -1054,21 +1078,36 @@
             </select>
           </div>
         </div>
+        <div class="field">
+          <label class="field-label">Apresentador</label>
+          <select class="select" name="apresentador">
+            <option value="">—</option>
+            <option value="Dr. André">Dr. André</option>
+            <option value="Dra. Luana">Dra. Luana</option>
+            <option value="Dr. Cláudio">Dr. Cláudio</option>
+            <option value="Dra. Meire">Dra. Meire</option>
+            <option value="Dr. James">Dr. James</option>
+          </select>
+        </div>
+        <div class="field">
+          <label class="field-label">Plataformas</label>
+          <div class="checkbox-group" id="modal-plataformas">
+            <label class="checkbox-chip"><input type="checkbox" value="TikTok"> TikTok</label>
+            <label class="checkbox-chip"><input type="checkbox" value="Kwai"> Kwai</label>
+            <label class="checkbox-chip"><input type="checkbox" value="Instagram"> Instagram</label>
+            <label class="checkbox-chip"><input type="checkbox" value="YouTube Shorts"> YouTube Shorts</label>
+            <label class="checkbox-chip"><input type="checkbox" value="YouTube Longo"> YouTube Longo</label>
+            <label class="checkbox-chip"><input type="checkbox" value="Live YouTube"> Live YouTube</label>
+          </div>
+        </div>
         <div class="field-group">
           <div class="field">
-            <label class="field-label">Apresentador</label>
-            <select class="select" name="apresentador">
-              <option value="">—</option>
-              <option value="Dr. André">Dr. André</option>
-              <option value="Dra. Luana">Dra. Luana</option>
-              <option value="Dr. Cláudio">Dr. Cláudio</option>
-              <option value="Dra. Meire">Dra. Meire</option>
-              <option value="Dr. James">Dr. James</option>
-            </select>
+            <label class="field-label">Data da Gravação</label>
+            <input class="input" type="date" name="dataGravacao">
           </div>
           <div class="field">
-            <label class="field-label">Plataformas (separe por vírgula)</label>
-            <input class="input" type="text" name="plataformas" placeholder="TikTok, Kwai, Instagram, YouTube Shorts">
+            <label class="field-label">Data envio edição</label>
+            <input class="input" type="date" name="dataEnvioEdicao">
           </div>
         </div>
         <div class="field-group">
@@ -1078,20 +1117,50 @@
           </div>
           <div class="field">
             <label class="field-label">Mês</label>
-            <input class="input" type="text" name="mes" placeholder="ex: maio/2026">
+            <select class="select" name="mes">
+              <option value="">—</option>
+              <option value="Janeiro">Janeiro</option>
+              <option value="Fevereiro">Fevereiro</option>
+              <option value="Março">Março</option>
+              <option value="Abril">Abril</option>
+              <option value="Maio">Maio</option>
+              <option value="Junho">Junho</option>
+              <option value="Julho">Julho</option>
+              <option value="Agosto">Agosto</option>
+              <option value="Setembro">Setembro</option>
+              <option value="Outubro">Outubro</option>
+              <option value="Novembro">Novembro</option>
+              <option value="Dezembro">Dezembro</option>
+            </select>
           </div>
         </div>
         <div class="field">
-          <label class="field-label">Link Drive Raw</label>
+          <label class="field-label">Link do vídeo sem edição</label>
           <input class="input" type="url" name="linkDriveRaw" placeholder="https://drive.google.com/...">
         </div>
         <div class="field">
-          <label class="field-label">Link Drive Editado</label>
+          <label class="field-label">Link do vídeo editado</label>
           <input class="input" type="url" name="linkDriveEditado" placeholder="https://drive.google.com/...">
         </div>
         <div class="field">
-          <label class="field-label">Link Publicação</label>
+          <label class="field-label">Link da publicação</label>
           <input class="input" type="url" name="linkPublicacao" placeholder="https://instagram.com/p/...">
+        </div>
+        <div class="field">
+          <label class="field-label">Legenda</label>
+          <textarea class="textarea" name="legenda" maxlength="2200" placeholder="Texto da legenda do vídeo nas redes sociais" style="min-height: 100px;"></textarea>
+        </div>
+        <div class="field">
+          <label class="field-label">Link de referência 1 (concorrente)</label>
+          <input class="input" type="url" name="linkRef1" placeholder="https://...">
+        </div>
+        <div class="field">
+          <label class="field-label">Link de referência 2 (concorrente)</label>
+          <input class="input" type="url" name="linkRef2" placeholder="https://...">
+        </div>
+        <div class="field">
+          <label class="field-label">Link de referência 3 (concorrente)</label>
+          <input class="input" type="url" name="linkRef3" placeholder="https://...">
         </div>
         <div class="field">
           <label class="field-label">Notas</label>
@@ -1519,6 +1588,27 @@
   const modalSave = document.getElementById('modal-save');
   let modalRow = null;
 
+  function setPlataformas(values) {
+    const wrap = document.getElementById('modal-plataformas');
+    const set = new Set(values || []);
+    wrap.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+      cb.checked = set.has(cb.value);
+      cb.parentElement.classList.toggle('checked', cb.checked);
+    });
+  }
+
+  function getPlataformas() {
+    const wrap = document.getElementById('modal-plataformas');
+    return Array.from(wrap.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value);
+  }
+
+  // Toggle visual da chip ao clicar
+  document.getElementById('modal-plataformas').addEventListener('change', (e) => {
+    if (e.target.matches('input[type="checkbox"]')) {
+      e.target.parentElement.classList.toggle('checked', e.target.checked);
+    }
+  });
+
   function openCardModal(row) {
     if (document.body.classList.contains('is-readonly')) return;
     if (!calendarioCache) return;
@@ -1532,12 +1622,18 @@
     modalForm.marca.value = item.marca || 'ABADV';
     modalForm.tipoConteudo.value = item.tipoConteudo || '';
     modalForm.apresentador.value = item.apresentador || '';
-    modalForm.plataformas.value = (item.plataformas || []).join(', ');
+    setPlataformas(item.plataformas || []);
+    modalForm.dataGravacao.value = (item.dataGravacao || '').slice(0, 10);
+    modalForm.dataEnvioEdicao.value = (item.dataEnvioEdicao || '').slice(0, 10);
     modalForm.dataPublicacao.value = (item.dataPublicacao || '').slice(0, 10);
     modalForm.mes.value = item.mes || '';
     modalForm.linkDriveRaw.value = item.linkDriveRaw || '';
     modalForm.linkDriveEditado.value = item.linkDriveEditado || '';
     modalForm.linkPublicacao.value = item.linkPublicacao || '';
+    modalForm.legenda.value = item.legenda || '';
+    modalForm.linkRef1.value = item.linkRef1 || '';
+    modalForm.linkRef2.value = item.linkRef2 || '';
+    modalForm.linkRef3.value = item.linkRef3 || '';
     modalForm.notas.value = item.notas || '';
     modalResult.innerHTML = '';
     modalResult.className = '';
@@ -1553,6 +1649,7 @@
     document.getElementById('modal-delete').style.display = 'none';
     modalForm.reset();
     modalForm.marca.value = 'ABADV';
+    setPlataformas([]);
     modalResult.innerHTML = '';
     modalResult.className = '';
     modal.classList.add('show');
@@ -1572,11 +1669,7 @@
   modalForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const data = Object.fromEntries(new FormData(modalForm).entries());
-    if (data.plataformas) {
-      data.plataformas = data.plataformas.split(',').map(s => s.trim()).filter(Boolean);
-    } else {
-      data.plataformas = [];
-    }
+    data.plataformas = getPlataformas();
     const isCreate = !modalRow;
     const url = isCreate ? '/api/calendario' : `/api/calendario/${modalRow}`;
     const method = isCreate ? 'POST' : 'PATCH';
