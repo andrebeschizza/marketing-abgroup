@@ -237,6 +237,12 @@
       border-color: var(--border-strong);
     }
     .btn-secondary:hover { background: var(--bg-subtle); opacity: 1; }
+    .btn-danger {
+      background: var(--bg-card);
+      color: var(--danger);
+      border-color: var(--danger);
+    }
+    .btn-danger:hover { background: var(--danger-soft); opacity: 1; }
     .form-result {
       font-size: 12px;
       padding: 10px 12px;
@@ -939,6 +945,7 @@
         <option>Consumidor</option>
       </select>
       <button class="btn btn-secondary" id="btn-cal-reset">Limpar filtros</button>
+      <button class="btn readonly-hide" id="btn-cal-novo" style="margin-left: 8px;">+ Novo card</button>
       <span class="cal-count" id="cal-count">—</span>
     </div>
 
@@ -1093,6 +1100,7 @@
       </div>
       <div id="modal-result"></div>
       <div class="modal-foot">
+        <button type="button" class="btn btn-danger" id="modal-delete" style="margin-right: auto;">Deletar</button>
         <button type="button" class="btn btn-secondary" id="modal-cancel">Cancelar</button>
         <button type="submit" class="btn" id="modal-save">Salvar alterações</button>
       </div>
@@ -1517,6 +1525,9 @@
     const item = calendarioCache.items.find(i => i.row === row);
     if (!item) return;
     modalRow = row;
+    document.getElementById('modal-title').textContent = 'Editar card';
+    document.getElementById('modal-save').textContent = 'Salvar alterações';
+    document.getElementById('modal-delete').style.display = 'inline-flex';
     modalForm.titulo.value = item.titulo || '';
     modalForm.marca.value = item.marca || 'ABADV';
     modalForm.tipoConteudo.value = item.tipoConteudo || '';
@@ -1528,6 +1539,20 @@
     modalForm.linkDriveEditado.value = item.linkDriveEditado || '';
     modalForm.linkPublicacao.value = item.linkPublicacao || '';
     modalForm.notas.value = item.notas || '';
+    modalResult.innerHTML = '';
+    modalResult.className = '';
+    modal.classList.add('show');
+    setTimeout(() => modalForm.titulo.focus(), 100);
+  }
+
+  function openNewCardModal() {
+    if (document.body.classList.contains('is-readonly')) return;
+    modalRow = null;
+    document.getElementById('modal-title').textContent = 'Novo card';
+    document.getElementById('modal-save').textContent = 'Criar card';
+    document.getElementById('modal-delete').style.display = 'none';
+    modalForm.reset();
+    modalForm.marca.value = 'ABADV';
     modalResult.innerHTML = '';
     modalResult.className = '';
     modal.classList.add('show');
@@ -1546,33 +1571,63 @@
 
   modalForm.addEventListener('submit', async (e) => {
     e.preventDefault();
-    if (!modalRow) return;
     const data = Object.fromEntries(new FormData(modalForm).entries());
     if (data.plataformas) {
       data.plataformas = data.plataformas.split(',').map(s => s.trim()).filter(Boolean);
     } else {
       data.plataformas = [];
     }
-    modalSave.disabled = true; modalSave.textContent = 'Salvando…';
+    const isCreate = !modalRow;
+    const url = isCreate ? '/api/calendario' : `/api/calendario/${modalRow}`;
+    const method = isCreate ? 'POST' : 'PATCH';
+    const labelDoing = isCreate ? 'Criando…' : 'Salvando…';
+    const labelDefault = isCreate ? 'Criar card' : 'Salvar alterações';
+    modalSave.disabled = true; modalSave.textContent = labelDoing;
     modalResult.className = ''; modalResult.innerHTML = '';
     try {
-      const res = await fetch(`/api/calendario/${modalRow}`, {
-        method: 'PATCH',
+      const res = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       });
       const j = await res.json().catch(() => ({}));
       if (!res.ok || !j.ok) throw new Error(j.error || 'HTTP ' + res.status);
       modalResult.className = 'modal-result success';
-      modalResult.innerHTML = '✓ Card atualizado.';
+      modalResult.innerHTML = isCreate ? '✓ Card criado.' : '✓ Card atualizado.';
       await loadCalendario();
       setTimeout(closeCardModal, 600);
     } catch (err) {
       modalResult.className = 'modal-result error';
       modalResult.innerHTML = '✗ ' + escapeHtml(err.message);
     }
-    modalSave.disabled = false; modalSave.textContent = 'Salvar alterações';
+    modalSave.disabled = false; modalSave.textContent = labelDefault;
   });
+
+  // Botão Deletar dentro do modal
+  document.getElementById('modal-delete').addEventListener('click', async () => {
+    if (!modalRow) return;
+    const titulo = modalForm.titulo.value || 'este card';
+    if (!confirm(`Deletar "${titulo}"?\n\nEssa ação não pode ser desfeita.`)) return;
+    const btnDel = document.getElementById('modal-delete');
+    btnDel.disabled = true; btnDel.textContent = 'Deletando…';
+    modalResult.className = ''; modalResult.innerHTML = '';
+    try {
+      const res = await fetch(`/api/calendario/${modalRow}`, { method: 'DELETE' });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok || !j.ok) throw new Error(j.error || 'HTTP ' + res.status);
+      modalResult.className = 'modal-result success';
+      modalResult.innerHTML = '✓ Card deletado.';
+      await loadCalendario();
+      setTimeout(closeCardModal, 600);
+    } catch (err) {
+      modalResult.className = 'modal-result error';
+      modalResult.innerHTML = '✗ ' + escapeHtml(err.message);
+    }
+    btnDel.disabled = false; btnDel.textContent = 'Deletar';
+  });
+
+  // Botão "+ Novo card" no topo do kanban
+  document.getElementById('btn-cal-novo').addEventListener('click', openNewCardModal);
 
   // Click no card (que não seja em botão) abre modal
   document.getElementById('kanban').addEventListener('click', (e) => {
