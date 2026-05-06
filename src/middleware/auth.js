@@ -1,20 +1,23 @@
 // Middleware: autenticação + autorização por perfil
 //
 // 6 perfis fixos:
-//  - mkt          → Marketing (admin, full access)
-//  - comercial    → Comercial (read-only do calendário)
-//  - abadv        → Vertical ABADV (read-only filtrado pela própria marca)
-//  - aposentabr   → Vertical AposentaBR (read-only filtrado)
-//  - abcred       → Vertical AB CRED (read-only filtrado)
-//  - vitalidade   → Vertical Vitalidade+ (read-only filtrado)
-
+//  - mkt          → Marketing (admin geral, vê tudo, edita tudo)
+//  - comercial    → Comercial (read-only de tudo — vê calendário inteiro)
+//  - abadv        → Vertical ABADV (admin filtrado pela própria marca)
+//  - aposentabr   → Vertical AposentaBR (admin filtrado)
+//  - abcred       → Vertical AB CRED (admin filtrado)
+//  - vitalidade   → Vertical Vitalidade+ (admin filtrado)
+//
+// Verticais têm admin=true porque o filtro automático por marca em listCalendario
+// já restringe o que eles veem ao próprio escopo. Logo, podem editar/criar/mover
+// sem risco de tocar conteúdo de outras verticais.
 export const PERFIS = {
   mkt:        { label: 'Marketing',     marca: null,         admin: true  },
   comercial:  { label: 'Comercial',     marca: null,         admin: false },
-  abadv:      { label: 'ABADV',         marca: 'ABADV',      admin: false },
-  aposentabr: { label: 'AposentaBR',    marca: 'AposentaBR', admin: false },
-  abcred:     { label: 'AB CRED',       marca: 'AB CRED',    admin: false },
-  vitalidade: { label: 'Vitalidade+',   marca: 'Vitalidade+',admin: false },
+  abadv:      { label: 'ABADV',         marca: 'ABADV',      admin: true  },
+  aposentabr: { label: 'AposentaBR',    marca: 'AposentaBR', admin: true  },
+  abcred:     { label: 'AB CRED',       marca: 'AB CRED',    admin: true  },
+  vitalidade: { label: 'Vitalidade+',   marca: 'Vitalidade+',admin: true  },
 };
 
 // Lê AB_PASSWORDS (JSON com {perfil:senha}). Se ausente, fallback pro AB_PASSWORD legado mapeado pro perfil 'mkt'.
