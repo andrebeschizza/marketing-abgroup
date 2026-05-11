@@ -186,6 +186,27 @@
       margin-top: 6px;
       font-style: italic;
     }
+    .kpi { position: relative; }
+    .kpi-edit-btn {
+      position: absolute; top: 6px; right: 6px;
+      width: 24px; height: 24px;
+      border: 1px solid transparent;
+      background: transparent;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+      color: var(--ink-mute);
+      opacity: 0;
+      transition: all 0.12s;
+      display: inline-flex; align-items: center; justify-content: center;
+    }
+    .kpi:hover .kpi-edit-btn { opacity: 1; }
+    .kpi-edit-btn:hover {
+      background: var(--accent-soft);
+      color: var(--accent-deep);
+      border-color: var(--accent);
+    }
+    body.is-readonly .kpi-edit-btn { display: none !important; }
 
     /* CARD */
     .card {
@@ -1423,7 +1444,8 @@
       // Cap visual da barra em 110% (mostra que estourou meta mas sem sair do card)
       const barW = Math.min(110, k.pct);
       return `
-        <div class="kpi ${k.status}">
+        <div class="kpi ${k.status}" data-indicador="${escapeHtml(k.indicador)}" data-realizado="${k.realizado}" data-unidade="${escapeHtml(k.unidade || '')}">
+          <button class="kpi-edit-btn" title="Atualizar valor" type="button">✎</button>
           <div class="kpi-label">${escapeHtml(k.indicador)}</div>
           <div class="kpi-value">${formatNum(k.realizado)}${k.unidade ? '<span style="font-size:13px;color:var(--ink-mute);"> ' + escapeHtml(k.unidade) + '</span>' : ''}</div>
           <div class="kpi-meta">Meta <strong>${formatNum(k.meta)}</strong> · ${k.pct}%</div>
@@ -1433,6 +1455,39 @@
       `;
     }).join('');
   }
+
+  // Click no lápis → atualiza Realizado via prompt
+  document.getElementById('kpis').addEventListener('click', async (e) => {
+    const btn = e.target.closest('.kpi-edit-btn');
+    if (!btn) return;
+    e.stopPropagation();
+    const card = btn.closest('.kpi');
+    const indicador = card.dataset.indicador;
+    const realizadoAtual = card.dataset.realizado;
+    const unidade = card.dataset.unidade;
+    const novo = window.prompt(
+      `Atualizar "${indicador}"\n\nValor atual: ${realizadoAtual} ${unidade}\nNovo valor:`,
+      realizadoAtual
+    );
+    if (novo === null) return; // cancelou
+    const num = parseFloat(String(novo).replace(',', '.'));
+    if (isNaN(num)) { alert('Valor inválido — precisa ser número'); return; }
+    btn.disabled = true; btn.textContent = '…';
+    try {
+      const r = await fetch(`/api/kpis/${encodeURIComponent(indicador)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ realizado: num }),
+      });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || !j.ok) throw new Error(j.error || ('HTTP ' + r.status));
+      // Recarrega tudo
+      await loadKpis();
+    } catch (err) {
+      alert('Erro ao atualizar: ' + err.message);
+      btn.disabled = false; btn.textContent = '✎';
+    }
+  });
   function formatRelative(iso) {
     try {
       const d = new Date(iso);
