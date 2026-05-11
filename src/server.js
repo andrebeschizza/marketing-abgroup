@@ -8,7 +8,7 @@ import { fileURLToPath } from 'url';
 
 import { requireAuth, requireAdmin, validateLogin, PERFIS } from './middleware/auth.js';
 import { ping } from './lib/sheets.js';
-import { getKpis } from './api/kpis.js';
+import { getKpis, seedKpis } from './api/kpis.js';
 import { listDemandas, createDemanda, updateDemandaStatus } from './api/demandas.js';
 import { listAgentes } from './api/agentes.js';
 import { listAlertas, createAlerta } from './api/alertas.js';
@@ -114,6 +114,7 @@ app.use('/api', requireAuth);
 // GET é livre pra qualquer perfil autenticado.
 // POST/PATCH/DELETE: apenas perfil 'mkt' (admin).
 app.get('/api/kpis', getKpis);
+app.post('/api/admin/seed-kpis', requireAdmin, seedKpis);
 
 app.get('/api/demandas', listDemandas);
 app.post('/api/demandas', requireAdmin, createDemanda);
