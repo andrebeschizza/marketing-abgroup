@@ -8,7 +8,7 @@ import { fileURLToPath } from 'url';
 
 import { requireAuth, requireAdmin, validateLogin, PERFIS } from './middleware/auth.js';
 import { ping } from './lib/sheets.js';
-import { getKpis, seedKpis, updateKpi } from './api/kpis.js';
+import { getKpis, seedKpis, updateKpi, snapshotKpis, getKpiHistorico } from './api/kpis.js';
 import { listDemandas, createDemanda, updateDemandaStatus } from './api/demandas.js';
 import { listAgentes } from './api/agentes.js';
 import { listAlertas, createAlerta } from './api/alertas.js';
@@ -114,8 +114,10 @@ app.use('/api', requireAuth);
 // GET é livre pra qualquer perfil autenticado.
 // POST/PATCH/DELETE: apenas perfil 'mkt' (admin).
 app.get('/api/kpis', getKpis);
+app.get('/api/kpis/:indicador/historico', getKpiHistorico);
 app.patch('/api/kpis/:indicador', requireAdmin, updateKpi);
 app.post('/api/admin/seed-kpis', requireAdmin, seedKpis);
+app.post('/api/admin/snapshot-kpis', requireAdmin, snapshotKpis);
 
 app.get('/api/demandas', listDemandas);
 app.post('/api/demandas', requireAdmin, createDemanda);
@@ -166,4 +168,20 @@ app.use((err, req, res, next) => {
 app.listen(PORT, () => {
   console.log(`Marketing AB Group rodando em http://localhost:${PORT}`);
   console.log(`Health: http://localhost:${PORT}/healthz`);
+
+  // Cron interno: snapshot diário dos KPIs (idempotente — pula se já fez hoje)
+  // Roda 60s após start (dá tempo do Sheets autenticar) e depois a cada 6h
+  // (6h ao invés de 24h pra cobrir restarts e timezone shifts. snapshotKpis é idempotente.)
+  const runSnapshot = async () => {
+    try {
+      const fakeReq = {}, fakeRes = { json: (x) => x, status: () => fakeRes };
+      const { snapshotKpis: fn } = await import('./api/kpis.js');
+      await fn(fakeReq, fakeRes);
+      console.log(`[cron] snapshot-kpis @ ${new Date().toISOString()}`);
+    } catch (e) {
+      console.error('[cron] snapshot-kpis failed:', e.message);
+    }
+  };
+  setTimeout(runSnapshot, 60 * 1000);
+  setInterval(runSnapshot, 6 * 60 * 60 * 1000);
 });
