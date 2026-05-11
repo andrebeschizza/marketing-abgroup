@@ -8,7 +8,7 @@ const STATUS_EDITANDO = 'Editando';
 const DIAS_ESTAGNACAO = 3;
 
 // 1) KPIs em risco: dia do mês ≥ 20 e pct < 70%
-async function checkKpisEmRisco() {
+async function checkKpisEmRisco(opts = {}) {
   const hoje = new Date();
   const dia = hoje.getDate();
   if (dia < 20) return { skipped: true, reason: `dia ${dia} < 20` };
@@ -24,7 +24,7 @@ async function checkKpisEmRisco() {
     if (pct >= 70) continue;
     const diasRestantes = ultimoDiaDoMes(hoje) - dia;
     const titulo = `🔴 KPI em risco: ${k['Indicador']} (${pct}%)`;
-    if (await alreadyNotifiedToday(titulo)) continue;
+    if (!opts.force && await alreadyNotifiedToday(titulo)) continue;
     await notify({
       tipo: 'alerta_kpi',
       titulo,
@@ -38,7 +38,7 @@ async function checkKpisEmRisco() {
 }
 
 // 2) Cards "Editando" há mais de 3 dias
-async function checkCardsEstagnados() {
+async function checkCardsEstagnados(opts = {}) {
   const cards = await readSheet('calendario').catch(() => []);
   const limite = Date.now() - DIAS_ESTAGNACAO * 24 * 60 * 60 * 1000;
   const acionados = [];
@@ -51,13 +51,13 @@ async function checkCardsEstagnados() {
     if (isNaN(t) || t >= limite) continue;
     const diasParado = Math.floor((Date.now() - t) / (24 * 60 * 60 * 1000));
     const titulo = `⏳ Estagnado em edição: ${c['Título']}`;
-    if (await alreadyNotifiedToday(titulo)) continue;
+    if (!opts.force && await alreadyNotifiedToday(titulo)) continue;
     await notify({
       tipo: 'alerta_estagnado',
       titulo,
       detalhe: `Card está em "Editando" há ${diasParado} dias. Acompanhe o vídeomaker.`,
       url: '/#calendario',
-      para: 'mkt',
+      para: recipientsForMarca(c['Marca']),
       marca: c['Marca'] || '',
     });
     acionados.push(c['Título']);
@@ -66,7 +66,7 @@ async function checkCardsEstagnados() {
 }
 
 // 3) Pauta vencida: Data Publicação = hoje e Link Publicação vazio
-async function checkPautaVencida() {
+async function checkPautaVencida(opts = {}) {
   const cards = await readSheet('calendario').catch(() => []);
   const hoje = new Date().toISOString().slice(0, 10);
   const acionados = [];
@@ -77,13 +77,13 @@ async function checkPautaVencida() {
     if (c['Link Publicação']) continue; // já tem link, ok
     if (c['Status'] === 'Publicado') continue;
     const titulo = `📅 Publica hoje sem link: ${c['Título']}`;
-    if (await alreadyNotifiedToday(titulo)) continue;
+    if (!opts.force && await alreadyNotifiedToday(titulo)) continue;
     await notify({
       tipo: 'alerta_pauta',
       titulo,
       detalhe: `Card com data de publicação hoje mas ainda sem Link Publicação. Status: ${c['Status'] || '?'}.`,
       url: '/#calendario',
-      para: 'mkt',
+      para: recipientsForMarca(c['Marca']),
       marca: c['Marca'] || '',
     });
     acionados.push(c['Título']);
@@ -95,27 +95,36 @@ function ultimoDiaDoMes(d) {
   return new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
 }
 
-// Roda todas as checagens
-export async function runAlerts() {
+// Map marca → perfil vertical. Usado pra rotear notificações pra mkt + dono da marca.
+const MARCA_TO_PERFIL = {
+  'ABADV': 'abadv',
+  'AposentaBR': 'aposentabr',
+  'AB CRED': 'abcred',
+  'Vitalidade+': 'vitalidade',
+};
+function recipientsForMarca(marca) {
+  const perfil = MARCA_TO_PERFIL[marca];
+  return perfil ? `mkt,${perfil}` : 'mkt';
+}
+
+// Roda todas as checagens. opts.force=true bypassa idempotência.
+export async function runAlerts(opts = {}) {
   const inicio = Date.now();
   const out = {};
-  try {
-    out.kpisEmRisco = await checkKpisEmRisco();
-  } catch (e) { out.kpisEmRisco = { error: e.message }; }
-  try {
-    out.cardsEstagnados = await checkCardsEstagnados();
-  } catch (e) { out.cardsEstagnados = { error: e.message }; }
-  try {
-    out.pautaVencida = await checkPautaVencida();
-  } catch (e) { out.pautaVencida = { error: e.message }; }
+  try { out.kpisEmRisco = await checkKpisEmRisco(opts); }
+  catch (e) { out.kpisEmRisco = { error: e.message }; }
+  try { out.cardsEstagnados = await checkCardsEstagnados(opts); }
+  catch (e) { out.cardsEstagnados = { error: e.message }; }
+  try { out.pautaVencida = await checkPautaVencida(opts); }
+  catch (e) { out.pautaVencida = { error: e.message }; }
   out.duracaoMs = Date.now() - inicio;
   return out;
 }
 
-// Endpoint manual pra disparar (admin)
+// Endpoint manual pra disparar (admin). ?force=1 ignora idempotência diária.
 export async function runAlertsHandler(req, res) {
   try {
-    const result = await runAlerts();
+    const result = await runAlerts({ force: req.query.force === '1' || req.body?.force === true });
     res.json({ ok: true, ...result });
   } catch (e) {
     res.status(500).json({ error: e.message });
