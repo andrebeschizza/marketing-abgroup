@@ -138,6 +138,9 @@
     @media (min-width: 768px) {
       .kpis { grid-template-columns: repeat(4, 1fr); gap: 14px; }
     }
+    @media (min-width: 1100px) {
+      .kpis { grid-template-columns: repeat(5, 1fr); gap: 12px; }
+    }
     .kpi {
       background: var(--bg-card);
       border: 1px solid var(--border);
@@ -170,6 +173,19 @@
     .kpi-fill { height: 100%; background: var(--accent); border-radius: 999px; transition: width 0.6s; }
     .kpi.amarelo .kpi-fill { background: var(--warning); }
     .kpi.critico .kpi-fill { background: var(--danger); }
+    .kpi-tier {
+      font-size: 10px; font-weight: 600;
+      color: var(--accent-deep);
+      margin-top: 8px;
+      padding: 2px 6px; border-radius: 4px;
+      background: var(--accent-soft);
+      display: inline-block;
+    }
+    .kpi-updated {
+      font-size: 9px; color: var(--ink-mute);
+      margin-top: 6px;
+      font-style: italic;
+    }
 
     /* CARD */
     .card {
@@ -1397,14 +1413,39 @@
       showSetupBanner('A aba "kpis" está vazia ou ainda não foi criada na planilha. Crie ela com colunas <code>Indicador, Meta, Realizado, Unidade, Atualizado</code>.');
       return;
     }
-    el.innerHTML = data.kpis.map(k => `
-      <div class="kpi ${k.status}">
-        <div class="kpi-label">${escapeHtml(k.indicador)}</div>
-        <div class="kpi-value">${formatNum(k.realizado)}${k.unidade ? '<span style="font-size:13px;color:var(--ink-mute);"> ' + escapeHtml(k.unidade) + '</span>' : ''}</div>
-        <div class="kpi-meta">Meta <strong>${formatNum(k.meta)}</strong> · ${k.pct}%</div>
-        <div class="kpi-bar"><div class="kpi-fill" style="width:${Math.min(100, k.pct)}%"></div></div>
-      </div>
-    `).join('');
+    el.innerHTML = data.kpis.map(k => {
+      const proximoTier = k.proximoTier
+        ? `<div class="kpi-tier">↗ próx: ${formatNum(k.proximoTier)}</div>`
+        : '';
+      const atualizado = k.atualizado
+        ? `<div class="kpi-updated" title="${escapeHtml(k.atualizado)}">${formatRelative(k.atualizado)}</div>`
+        : '';
+      // Cap visual da barra em 110% (mostra que estourou meta mas sem sair do card)
+      const barW = Math.min(110, k.pct);
+      return `
+        <div class="kpi ${k.status}">
+          <div class="kpi-label">${escapeHtml(k.indicador)}</div>
+          <div class="kpi-value">${formatNum(k.realizado)}${k.unidade ? '<span style="font-size:13px;color:var(--ink-mute);"> ' + escapeHtml(k.unidade) + '</span>' : ''}</div>
+          <div class="kpi-meta">Meta <strong>${formatNum(k.meta)}</strong> · ${k.pct}%</div>
+          <div class="kpi-bar"><div class="kpi-fill" style="width:${barW}%"></div></div>
+          ${proximoTier}${atualizado}
+        </div>
+      `;
+    }).join('');
+  }
+  function formatRelative(iso) {
+    try {
+      const d = new Date(iso);
+      if (isNaN(d.getTime())) return iso;
+      const diffMs = Date.now() - d.getTime();
+      const min = Math.round(diffMs / 60000);
+      if (min < 1) return 'agora';
+      if (min < 60) return `${min}min atrás`;
+      const h = Math.round(min / 60);
+      if (h < 24) return `${h}h atrás`;
+      const dias = Math.round(h / 24);
+      return `${dias}d atrás`;
+    } catch { return iso; }
   }
   function formatNum(n) {
     if (n >= 1000) return n.toLocaleString('pt-BR');
