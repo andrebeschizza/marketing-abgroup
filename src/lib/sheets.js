@@ -189,6 +189,28 @@ export async function deleteRow(tabName, rowNumber) {
   return { ok: true };
 }
 
+// Atualiza um range arbitrário (overwrite). values é matriz 2D.
+export async function updateRange(tabName, range, values) {
+  const sheets = getClient();
+  await sheets.spreadsheets.values.update({
+    spreadsheetId: SHEET_ID(),
+    range: `${tabName}!${range}`,
+    valueInputOption: 'USER_ENTERED',
+    requestBody: { values },
+  });
+  return { ok: true };
+}
+
+// Limpa values de um range (mantém a aba e formatação)
+export async function clearRange(tabName, range) {
+  const sheets = getClient();
+  await sheets.spreadsheets.values.clear({
+    spreadsheetId: SHEET_ID(),
+    range: `${tabName}!${range}`,
+  });
+  return { ok: true };
+}
+
 // Status de saúde do client (pra healthz)
 export async function ping() {
   const hasCreds = !!(process.env.GOOGLE_SA_KEY_B64 || process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
