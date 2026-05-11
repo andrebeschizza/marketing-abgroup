@@ -15,6 +15,7 @@ import { listAlertas, createAlerta } from './api/alertas.js';
 import { listAtalhos } from './api/atalhos.js';
 import { listCalendario, createCalendarioItem, updateCalendarioItem, updateCalendarioStatus, deleteCalendarioItem, migrateFromNotion } from './api/calendario.js';
 import { listNotificacoes, createNotificacao, marcarLida, marcarTodasLidas } from './api/notificacoes.js';
+import { runAlertsHandler, runAlerts } from './jobs/alerts.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -118,6 +119,7 @@ app.get('/api/kpis/:indicador/historico', getKpiHistorico);
 app.patch('/api/kpis/:indicador', requireAdmin, updateKpi);
 app.post('/api/admin/seed-kpis', requireAdmin, seedKpis);
 app.post('/api/admin/snapshot-kpis', requireAdmin, snapshotKpis);
+app.post('/api/admin/run-alerts', requireAdmin, runAlertsHandler);
 
 app.get('/api/demandas', listDemandas);
 app.post('/api/demandas', requireAdmin, createDemanda);
@@ -184,4 +186,21 @@ app.listen(PORT, () => {
   };
   setTimeout(runSnapshot, 60 * 1000);
   setInterval(runSnapshot, 6 * 60 * 60 * 1000);
+
+  // Cron interno: alertas automáticos 1x/dia (90s após boot + a cada 24h)
+  const runAlertsCron = async () => {
+    try {
+      const out = await runAlerts();
+      const counts = {
+        kpis: out.kpisEmRisco?.acionados?.length || 0,
+        estagnados: out.cardsEstagnados?.acionados?.length || 0,
+        pauta: out.pautaVencida?.acionados?.length || 0,
+      };
+      console.log(`[cron] alerts @ ${new Date().toISOString()} ·`, counts);
+    } catch (e) {
+      console.error('[cron] alerts failed:', e.message);
+    }
+  };
+  setTimeout(runAlertsCron, 90 * 1000);
+  setInterval(runAlertsCron, 24 * 60 * 60 * 1000);
 });
