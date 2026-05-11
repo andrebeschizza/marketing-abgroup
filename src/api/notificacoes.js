@@ -21,6 +21,19 @@ async function ensureTab() {
   }
 }
 
+// Verifica se já existe notificação com mesmo título criada hoje
+// Útil pra jobs automáticos não duplicarem (idempotente por dia).
+export async function alreadyNotifiedToday(titulo) {
+  try {
+    await ensureTab();
+    const rows = await readSheet(TAB);
+    const hoje = new Date().toISOString().slice(0, 10);
+    return rows.some(r => (r['Titulo'] || '') === titulo && String(r['Criado em'] || '').startsWith(hoje));
+  } catch {
+    return false;
+  }
+}
+
 // Helper interno (não-API): cria notificação programaticamente
 // Usado por outros endpoints (createDemanda, updateCalendarioStatus, etc).
 export async function notify({ tipo, titulo, detalhe, url, para, marca }) {
