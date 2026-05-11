@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
   <meta name="theme-color" content="#FFFFFF">
   <title>Marketing AB Group</title>
+  <!-- Chart.js para o histórico de KPIs -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" defer></script>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%231B9C85'/%3E%3Ctext x='16' y='22' font-family='Arial' font-size='16' font-weight='800' fill='white' text-anchor='middle'%3EAB%3C/text%3E%3C/svg%3E">
   <style>
     :root {
@@ -1236,6 +1238,25 @@
 
 </main>
 
+<!-- MODAL HISTÓRICO KPI -->
+<div class="modal-overlay" id="modal-kpi">
+  <div class="modal" role="dialog" aria-modal="true" style="max-width: 720px;">
+    <div class="modal-head">
+      <span class="modal-title" id="modal-kpi-title">Evolução</span>
+      <button class="modal-close" id="modal-kpi-close" aria-label="Fechar">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="modal-kpi-summary" style="display:flex; gap:14px; flex-wrap:wrap; margin-bottom:14px; padding-bottom:14px; border-bottom: 1px solid var(--border);"></div>
+      <div style="position:relative; height: 320px;">
+        <canvas id="modal-kpi-canvas"></canvas>
+      </div>
+      <div id="modal-kpi-empty" style="display:none; padding: 40px 20px; text-align:center; color: var(--ink-mute); font-size:13px;">
+        Sem histórico ainda. O snapshot diário começa a coletar agora — volta amanhã que vai ter o primeiro ponto.
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL EDIÇÃO CARD KANBAN -->
 <div class="modal-overlay" id="modal-card">
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
@@ -1456,36 +1477,150 @@
     }).join('');
   }
 
-  // Click no lápis → atualiza Realizado via prompt
+  // Click no lápis → atualiza Realizado via prompt. Click no resto do card → abre histórico.
   document.getElementById('kpis').addEventListener('click', async (e) => {
     const btn = e.target.closest('.kpi-edit-btn');
-    if (!btn) return;
-    e.stopPropagation();
-    const card = btn.closest('.kpi');
-    const indicador = card.dataset.indicador;
-    const realizadoAtual = card.dataset.realizado;
-    const unidade = card.dataset.unidade;
-    const novo = window.prompt(
-      `Atualizar "${indicador}"\n\nValor atual: ${realizadoAtual} ${unidade}\nNovo valor:`,
-      realizadoAtual
-    );
-    if (novo === null) return; // cancelou
-    const num = parseFloat(String(novo).replace(',', '.'));
-    if (isNaN(num)) { alert('Valor inválido — precisa ser número'); return; }
-    btn.disabled = true; btn.textContent = '…';
+    if (btn) {
+      e.stopPropagation();
+      const card = btn.closest('.kpi');
+      const indicador = card.dataset.indicador;
+      const realizadoAtual = card.dataset.realizado;
+      const unidade = card.dataset.unidade;
+      const novo = window.prompt(
+        `Atualizar "${indicador}"\n\nValor atual: ${realizadoAtual} ${unidade}\nNovo valor:`,
+        realizadoAtual
+      );
+      if (novo === null) return;
+      const num = parseFloat(String(novo).replace(',', '.'));
+      if (isNaN(num)) { alert('Valor inválido — precisa ser número'); return; }
+      btn.disabled = true; btn.textContent = '…';
+      try {
+        const r = await fetch(`/api/kpis/${encodeURIComponent(indicador)}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ realizado: num }),
+        });
+        const j = await r.json().catch(() => ({}));
+        if (!r.ok || !j.ok) throw new Error(j.error || ('HTTP ' + r.status));
+        await loadKpis();
+      } catch (err) {
+        alert('Erro ao atualizar: ' + err.message);
+        btn.disabled = false; btn.textContent = '✎';
+      }
+      return;
+    }
+    // Click no card (não no lápis) → abre histórico
+    const card = e.target.closest('.kpi');
+    if (card) openKpiHistorico(card.dataset.indicador, card.dataset.unidade);
+  });
+
+  // ===== MODAL HISTÓRICO KPI =====
+  let kpiChart = null;
+  async function openKpiHistorico(indicador, unidade) {
+    const overlay = document.getElementById('modal-kpi');
+    const title = document.getElementById('modal-kpi-title');
+    const summary = document.getElementById('modal-kpi-summary');
+    const empty = document.getElementById('modal-kpi-empty');
+    const canvas = document.getElementById('modal-kpi-canvas');
+    title.textContent = `Evolução · ${indicador}`;
+    summary.innerHTML = '<div style="color:var(--ink-mute);font-size:12px;">Carregando…</div>';
+    empty.style.display = 'none';
+    canvas.parentElement.style.display = 'block';
+    if (kpiChart) { kpiChart.destroy(); kpiChart = null; }
+    overlay.classList.add('show');
+
     try {
-      const r = await fetch(`/api/kpis/${encodeURIComponent(indicador)}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ realizado: num }),
+      const r = await fetch(`/api/kpis/${encodeURIComponent(indicador)}/historico`);
+      const data = await r.json();
+      const hist = data.historico || [];
+      if (hist.length === 0) {
+        summary.innerHTML = `<div style="color:var(--ink-soft);font-size:12px;">Nenhum snapshot ainda — o cron interno tira snapshot diário automaticamente. Espere até amanhã.</div>`;
+        canvas.parentElement.style.display = 'none';
+        empty.style.display = 'block';
+        return;
+      }
+      const ultimo = hist[hist.length - 1];
+      const primeiro = hist[0];
+      const variacao = ultimo.realizado - primeiro.realizado;
+      const sign = variacao > 0 ? '+' : '';
+      summary.innerHTML = `
+        <div><div style="font-size:10px;color:var(--ink-mute);">Atual</div><div style="font-size:20px;font-weight:700;">${formatNum(ultimo.realizado)} ${escapeHtml(unidade || '')}</div></div>
+        <div><div style="font-size:10px;color:var(--ink-mute);">Meta</div><div style="font-size:20px;font-weight:600;color:var(--ink-soft);">${formatNum(ultimo.meta)}</div></div>
+        <div><div style="font-size:10px;color:var(--ink-mute);">% Meta</div><div style="font-size:20px;font-weight:700;color:${ultimo.pct>=100?'var(--accent)':ultimo.pct>=70?'var(--warning)':'var(--danger)'};">${ultimo.pct}%</div></div>
+        <div><div style="font-size:10px;color:var(--ink-mute);">Variação no período</div><div style="font-size:20px;font-weight:600;color:${variacao>=0?'var(--accent)':'var(--danger)'};">${sign}${formatNum(variacao)}</div></div>
+        <div><div style="font-size:10px;color:var(--ink-mute);">Pontos coletados</div><div style="font-size:20px;font-weight:600;">${hist.length}</div></div>
+      `;
+
+      // Aguarda Chart.js carregar (defer no <head>)
+      if (typeof Chart === 'undefined') {
+        await new Promise(resolve => {
+          const check = setInterval(() => { if (typeof Chart !== 'undefined') { clearInterval(check); resolve(); } }, 50);
+          setTimeout(() => { clearInterval(check); resolve(); }, 3000);
+        });
+      }
+      if (typeof Chart === 'undefined') {
+        canvas.parentElement.innerHTML = '<div style="color:var(--danger);font-size:12px;">Chart.js não carregou. Verifique sua conexão.</div>';
+        return;
+      }
+      const ctx = canvas.getContext('2d');
+      kpiChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: hist.map(p => p.data),
+          datasets: [
+            {
+              label: 'Realizado',
+              data: hist.map(p => p.realizado),
+              borderColor: '#1B9C85',
+              backgroundColor: 'rgba(27, 156, 133, 0.1)',
+              fill: true,
+              tension: 0.3,
+              borderWidth: 2,
+              pointRadius: 3,
+              pointHoverRadius: 6,
+            },
+            {
+              label: 'Meta',
+              data: hist.map(p => p.meta),
+              borderColor: '#525252',
+              borderDash: [5, 5],
+              borderWidth: 1.5,
+              pointRadius: 0,
+              fill: false,
+            }
+          ]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          plugins: {
+            legend: { position: 'top', labels: { font: { size: 11 }, boxWidth: 14 } },
+            tooltip: {
+              callbacks: {
+                label: (c) => `${c.dataset.label}: ${formatNum(c.parsed.y)} ${unidade || ''}`,
+              }
+            }
+          },
+          scales: {
+            y: { beginAtZero: true, ticks: { font: { size: 10 } } },
+            x: { ticks: { font: { size: 10 }, maxRotation: 0, autoSkipPadding: 20 } }
+          }
+        }
       });
-      const j = await r.json().catch(() => ({}));
-      if (!r.ok || !j.ok) throw new Error(j.error || ('HTTP ' + r.status));
-      // Recarrega tudo
-      await loadKpis();
     } catch (err) {
-      alert('Erro ao atualizar: ' + err.message);
-      btn.disabled = false; btn.textContent = '✎';
+      summary.innerHTML = `<div style="color:var(--danger);font-size:12px;">Erro: ${escapeHtml(err.message)}</div>`;
+      canvas.parentElement.style.display = 'none';
+    }
+  }
+
+  document.getElementById('modal-kpi-close').addEventListener('click', () => {
+    document.getElementById('modal-kpi').classList.remove('show');
+    if (kpiChart) { kpiChart.destroy(); kpiChart = null; }
+  });
+  document.getElementById('modal-kpi').addEventListener('click', (e) => {
+    if (e.target.id === 'modal-kpi') {
+      document.getElementById('modal-kpi').classList.remove('show');
+      if (kpiChart) { kpiChart.destroy(); kpiChart = null; }
     }
   });
   function formatRelative(iso) {
