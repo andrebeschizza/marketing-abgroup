@@ -1,5 +1,5 @@
 // /api/kpis — Lê KPIs do mês da aba "kpis"
-import { readSheet, updateRange, clearRange } from '../lib/sheets.js';
+import { readSheet, updateRange, clearRange, createTab, deleteSheetIfExists } from '../lib/sheets.js';
 
 // Parse "225,233,241,249,257" → [225,233,241,249,257]
 function parseTiers(raw) {
@@ -66,14 +66,15 @@ const HEADER = ['Indicador', 'Meta', 'Realizado', 'Unidade', 'Atualizado em', 'T
 
 export async function seedKpis(req, res) {
   try {
-    // 1. Limpa o range (mantém aba)
-    await clearRange('kpis', 'A1:Z1000');
-    // 2. Escreve header + dados num único range
-    const matrix = [HEADER, ...SEED_KPIS];
-    await updateRange('kpis', `A1:F${matrix.length}`, matrix);
+    // 1. Apaga a aba inteira pra resetar formatação herdada (datas etc)
+    await deleteSheetIfExists('kpis');
+    // 2. Cria aba nova com header limpo
+    await createTab('kpis', HEADER);
+    // 3. Escreve as 11 linhas (a partir de A2)
+    await updateRange('kpis', `A2:F${SEED_KPIS.length + 1}`, SEED_KPIS);
     res.json({
       ok: true,
-      message: `KPIs reseeded: ${SEED_KPIS.length} indicadores`,
+      message: `KPIs reseeded: ${SEED_KPIS.length} indicadores (aba recriada)`,
       indicadores: SEED_KPIS.map(r => r[0]),
     });
   } catch (e) {
