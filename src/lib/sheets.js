@@ -189,6 +189,24 @@ export async function deleteRow(tabName, rowNumber) {
   return { ok: true };
 }
 
+// Apaga uma aba inteira (se existir). Útil pra resetar formatação herdada.
+export async function deleteSheetIfExists(tabName) {
+  const sheets = getClient();
+  const meta = await sheets.spreadsheets.get({
+    spreadsheetId: SHEET_ID(),
+    fields: 'sheets.properties',
+  });
+  const target = (meta.data.sheets || []).find(s => s.properties.title === tabName);
+  if (!target) return { ok: true, existed: false };
+  await sheets.spreadsheets.batchUpdate({
+    spreadsheetId: SHEET_ID(),
+    requestBody: {
+      requests: [{ deleteSheet: { sheetId: target.properties.sheetId } }],
+    },
+  });
+  return { ok: true, existed: true };
+}
+
 // Atualiza um range arbitrário (overwrite). values é matriz 2D.
 export async function updateRange(tabName, range, values) {
   const sheets = getClient();
