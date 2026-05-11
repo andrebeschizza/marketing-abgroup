@@ -529,6 +529,140 @@
       font-style: italic;
     }
 
+    /* TOGGLE VIEW (Kanban / Mensal) */
+    .cal-view-toggle {
+      display: flex; align-items: center; gap: 4px;
+      margin-bottom: 14px; padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    .view-btn {
+      padding: 7px 14px;
+      font-size: 12px; font-weight: 600;
+      color: var(--ink-soft);
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: var(--r-sm);
+      cursor: pointer;
+      transition: all 0.12s;
+      font-family: inherit;
+    }
+    .view-btn:hover { background: var(--bg-subtle); color: var(--ink); }
+    .view-btn.active {
+      background: var(--ink); color: white;
+      border-color: var(--ink);
+    }
+    .cal-month-nav {
+      display: flex; align-items: center; gap: 6px;
+      margin-left: auto;
+    }
+    .month-arrow {
+      width: 30px; height: 30px;
+      border: 1px solid var(--border);
+      background: var(--bg-card);
+      border-radius: var(--r-sm);
+      font-size: 16px; font-weight: 600;
+      color: var(--ink-soft);
+      cursor: pointer;
+      transition: all 0.12s;
+      display: inline-flex; align-items: center; justify-content: center;
+    }
+    .month-arrow:hover { background: var(--accent-soft); color: var(--accent-deep); border-color: var(--accent); }
+    .month-label {
+      font-size: 13px; font-weight: 600;
+      color: var(--ink);
+      min-width: 130px; text-align: center;
+      text-transform: capitalize;
+    }
+
+    /* CALENDÁRIO MENSAL */
+    .cal-monthly {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--r-md);
+      overflow: hidden;
+    }
+    .cal-month-grid-head {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      background: var(--bg-subtle);
+      border-bottom: 1px solid var(--border);
+    }
+    .cal-month-grid-head > div {
+      padding: 10px 8px; text-align: center;
+      font-size: 11px; font-weight: 700;
+      color: var(--ink-mute);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .cal-month-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      grid-auto-rows: minmax(100px, 1fr);
+    }
+    .cal-day {
+      border-right: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      padding: 6px 6px 8px;
+      min-height: 100px;
+      display: flex; flex-direction: column;
+      overflow: hidden;
+      transition: background 0.12s;
+    }
+    .cal-day:nth-child(7n) { border-right: none; }
+    .cal-day.other-month {
+      background: var(--bg-subtle);
+      opacity: 0.55;
+    }
+    .cal-day.today { background: var(--accent-soft); }
+    .cal-day.today .cal-day-num {
+      background: var(--accent); color: white;
+      width: 22px; height: 22px;
+      border-radius: 50%;
+      display: inline-flex; align-items: center; justify-content: center;
+      font-weight: 700;
+    }
+    .cal-day:hover:not(.other-month) { background: var(--bg-subtle); }
+    .cal-day-num {
+      font-size: 12px; font-weight: 600;
+      color: var(--ink-soft);
+      margin-bottom: 4px;
+      align-self: flex-start;
+    }
+    .cal-day-cards {
+      display: flex; flex-direction: column; gap: 3px;
+      overflow-y: auto; max-height: 100%;
+    }
+    .cal-day-card {
+      font-size: 10px;
+      padding: 3px 6px;
+      border-radius: 4px;
+      cursor: pointer;
+      color: white;
+      background: var(--ink-soft);
+      line-height: 1.2;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      transition: opacity 0.12s, transform 0.12s;
+      font-weight: 500;
+    }
+    .cal-day-card:hover { opacity: 0.85; transform: translateX(2px); }
+    .cal-day-card[data-marca="ABADV"] { background: #1B9C85; }
+    .cal-day-card[data-marca="AposentaBR"] { background: #6D28D9; }
+    .cal-day-card[data-marca="AB CRED"] { background: #B45309; }
+    .cal-day-card[data-marca="Vitalidade+"] { background: #B91C1C; }
+    .cal-day-more {
+      font-size: 10px;
+      color: var(--ink-mute);
+      padding: 2px 4px;
+      font-style: italic;
+      cursor: pointer;
+    }
+    .cal-day-more:hover { color: var(--accent-deep); text-decoration: underline; }
+    @media (max-width: 700px) {
+      .cal-month-grid { grid-auto-rows: minmax(70px, 1fr); }
+      .cal-day { min-height: 70px; padding: 4px; }
+      .cal-day-card { font-size: 9px; padding: 2px 4px; }
+    }
+
     /* BANNER PUBLICA HOJE */
     .publica-banner {
       background: var(--accent-soft);
@@ -974,8 +1108,27 @@
       <span class="cal-count" id="cal-count">—</span>
     </div>
 
+    <!-- Toggle Kanban / Mensal -->
+    <div class="cal-view-toggle">
+      <button class="view-btn active" data-view="kanban">Pipeline (Kanban)</button>
+      <button class="view-btn" data-view="monthly">Mensal</button>
+      <div class="cal-month-nav" id="cal-month-nav" style="display: none;">
+        <button class="month-arrow" id="btn-prev-month" title="Mês anterior">‹</button>
+        <span class="month-label" id="month-label">—</span>
+        <button class="month-arrow" id="btn-next-month" title="Próximo mês">›</button>
+        <button class="btn btn-secondary" id="btn-today-month" style="margin-left: 8px; padding: 6px 12px; font-size: 12px;">Hoje</button>
+      </div>
+    </div>
+
     <div class="kanban" id="kanban">
       <div class="loading"><div class="skeleton"></div><div class="skeleton" style="width:80%"></div></div>
+    </div>
+
+    <div class="cal-monthly" id="cal-monthly" style="display: none;">
+      <div class="cal-month-grid-head">
+        <div>Dom</div><div>Seg</div><div>Ter</div><div>Qua</div><div>Qui</div><div>Sex</div><div>Sáb</div>
+      </div>
+      <div class="cal-month-grid" id="cal-month-grid"></div>
     </div>
   </section>
 
@@ -1537,6 +1690,10 @@
     calendarioCache = data;
     renderKanban(data.items, data.statusOrder);
     renderPublicaBanner(data.publicaHoje, data.publicaAmanha);
+    // Se estiver no view mensal, re-renderiza também
+    if (calViewMode === 'monthly') {
+      renderMonthly(calApplyFilters(data.items));
+    }
   }
 
   document.getElementById('cal-filters').addEventListener('change', (e) => {
@@ -1544,11 +1701,151 @@
     if (!calendarioCache) return;
     const filtered = calApplyFilters(calendarioCache.items);
     renderKanban(filtered, calendarioCache.statusOrder);
+    if (calViewMode === 'monthly') renderMonthly(filtered);
   });
 
   document.getElementById('btn-cal-reset').addEventListener('click', () => {
     document.querySelectorAll('.cal-filter').forEach(s => s.value = '');
-    if (calendarioCache) renderKanban(calendarioCache.items, calendarioCache.statusOrder);
+    if (!calendarioCache) return;
+    renderKanban(calendarioCache.items, calendarioCache.statusOrder);
+    if (calViewMode === 'monthly') renderMonthly(calendarioCache.items);
+  });
+
+  // ===== CALENDÁRIO VISUAL MENSAL =====
+  let calViewMode = 'kanban'; // 'kanban' | 'monthly'
+  let calMonthDate = new Date(); // primeiro dia do mês visualizado
+
+  const MONTH_NAMES_PT = [
+    'janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
+    'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'
+  ];
+
+  function parseCardDate(str) {
+    // Aceita ISO datetime ou YYYY-MM-DD
+    if (!str) return null;
+    const s = String(str).trim();
+    if (!s) return null;
+    // pega só a parte de data antes de T se for ISO
+    const datePart = s.split('T')[0];
+    const m = datePart.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!m) return null;
+    return new Date(parseInt(m[1], 10), parseInt(m[2], 10) - 1, parseInt(m[3], 10));
+  }
+
+  function sameDay(a, b) {
+    return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+  }
+
+  function renderMonthly(items) {
+    const grid = document.getElementById('cal-month-grid');
+    if (!grid) return;
+
+    const year = calMonthDate.getFullYear();
+    const month = calMonthDate.getMonth();
+    const today = new Date();
+
+    // Label do mês
+    document.getElementById('month-label').textContent = `${MONTH_NAMES_PT[month]} ${year}`;
+
+    // Primeiro dia do mês e dia da semana
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const startDayOfWeek = firstDay.getDay(); // 0 = domingo
+    const daysInMonth = lastDay.getDate();
+
+    // Indexa items por dia (YYYY-MM-DD)
+    const itemsByDay = {};
+    (items || []).forEach(item => {
+      const d = parseCardDate(item.dataPublicacao);
+      if (!d) return;
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      if (!itemsByDay[key]) itemsByDay[key] = [];
+      itemsByDay[key].push(item);
+    });
+
+    const cells = [];
+    // Padding: dias do mês anterior
+    const prevMonthLastDay = new Date(year, month, 0).getDate();
+    for (let i = startDayOfWeek - 1; i >= 0; i--) {
+      cells.push({ day: prevMonthLastDay - i, otherMonth: true, dateObj: new Date(year, month - 1, prevMonthLastDay - i) });
+    }
+    // Dias do mês atual
+    for (let d = 1; d <= daysInMonth; d++) {
+      cells.push({ day: d, otherMonth: false, dateObj: new Date(year, month, d) });
+    }
+    // Padding até completar 42 (6 linhas × 7 colunas) ou 35
+    const targetLen = cells.length <= 35 ? 35 : 42;
+    let nextDay = 1;
+    while (cells.length < targetLen) {
+      cells.push({ day: nextDay, otherMonth: true, dateObj: new Date(year, month + 1, nextDay) });
+      nextDay++;
+    }
+
+    grid.innerHTML = cells.map(cell => {
+      const key = `${cell.dateObj.getFullYear()}-${String(cell.dateObj.getMonth() + 1).padStart(2, '0')}-${String(cell.dateObj.getDate()).padStart(2, '0')}`;
+      const dayItems = itemsByDay[key] || [];
+      const isToday = !cell.otherMonth && sameDay(cell.dateObj, today);
+      const classes = ['cal-day'];
+      if (cell.otherMonth) classes.push('other-month');
+      if (isToday) classes.push('today');
+
+      const maxShow = 4;
+      const shown = dayItems.slice(0, maxShow);
+      const overflow = dayItems.length - maxShow;
+
+      return `
+        <div class="${classes.join(' ')}" data-date="${key}">
+          <span class="cal-day-num">${cell.day}</span>
+          <div class="cal-day-cards">
+            ${shown.map(it => `
+              <div class="cal-day-card" data-row="${it.row}" data-marca="${escapeHtml(it.marca || '')}" title="${escapeHtml(it.titulo || '')} — ${escapeHtml(it.marca || '?')} — ${escapeHtml(it.apresentador || '?')}">
+                ${escapeHtml(it.titulo || '(sem título)')}
+              </div>
+            `).join('')}
+            ${overflow > 0 ? `<div class="cal-day-more">+ ${overflow} ${overflow === 1 ? 'card' : 'cards'}</div>` : ''}
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function switchCalView(view) {
+    calViewMode = view;
+    document.querySelectorAll('.view-btn').forEach(b => b.classList.toggle('active', b.dataset.view === view));
+    const isMonthly = view === 'monthly';
+    document.getElementById('kanban').style.display = isMonthly ? 'none' : '';
+    document.getElementById('cal-monthly').style.display = isMonthly ? '' : 'none';
+    document.getElementById('cal-month-nav').style.display = isMonthly ? 'flex' : 'none';
+    if (isMonthly && calendarioCache) {
+      renderMonthly(calApplyFilters(calendarioCache.items));
+    }
+  }
+
+  document.querySelectorAll('.view-btn').forEach(btn => {
+    btn.addEventListener('click', () => switchCalView(btn.dataset.view));
+  });
+
+  document.getElementById('btn-prev-month').addEventListener('click', () => {
+    calMonthDate = new Date(calMonthDate.getFullYear(), calMonthDate.getMonth() - 1, 1);
+    if (calendarioCache) renderMonthly(calApplyFilters(calendarioCache.items));
+  });
+
+  document.getElementById('btn-next-month').addEventListener('click', () => {
+    calMonthDate = new Date(calMonthDate.getFullYear(), calMonthDate.getMonth() + 1, 1);
+    if (calendarioCache) renderMonthly(calApplyFilters(calendarioCache.items));
+  });
+
+  document.getElementById('btn-today-month').addEventListener('click', () => {
+    calMonthDate = new Date();
+    if (calendarioCache) renderMonthly(calApplyFilters(calendarioCache.items));
+  });
+
+  // Click no mini-card abre o modal de edição (reaproveita openCardModal)
+  document.getElementById('cal-month-grid').addEventListener('click', (e) => {
+    const card = e.target.closest('.cal-day-card');
+    if (!card) return;
+    const row = parseInt(card.dataset.row, 10);
+    if (row && typeof openCardModal === 'function') openCardModal(row);
   });
 
   // Move status (← / → buttons in kanban cards)
