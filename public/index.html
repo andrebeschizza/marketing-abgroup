@@ -970,6 +970,7 @@
       </select>
       <button class="btn btn-secondary" id="btn-cal-reset">Limpar filtros</button>
       <button class="btn readonly-hide" id="btn-cal-novo" style="margin-left: 8px;">+ Novo card</button>
+      <button class="btn btn-secondary readonly-hide" id="btn-cal-migrar-notion" style="margin-left: 8px;" title="Importa cards antigos do Notion (uma vez só)">↓ Migrar do Notion</button>
       <span class="cal-count" id="cal-count">—</span>
     </div>
 
@@ -1721,6 +1722,45 @@
 
   // Botão "+ Novo card" no topo do kanban
   document.getElementById('btn-cal-novo').addEventListener('click', openNewCardModal);
+
+  // Botão "Migrar do Notion" — importa cards antigos do Notion (uma vez só, idempotente).
+  // Pede o token Notion via prompt() — não armazena, vai só no header da requisição.
+  document.getElementById('btn-cal-migrar-notion').addEventListener('click', async () => {
+    const token = window.prompt(
+      'Cole seu Notion Internal Integration Token (secret_...)\n\n' +
+      'O token NÃO é armazenado — é usado só nesta requisição.\n' +
+      'Cards já importados (com Notion ID) são pulados, então pode rodar de novo sem duplicar.'
+    );
+    if (!token) return;
+    if (!confirm('Vou importar os cards do Notion DB do Calendário Editorial pra cá. Confirma?')) return;
+
+    const btn = document.getElementById('btn-cal-migrar-notion');
+    const original = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Migrando…';
+    try {
+      const r = await fetch('/api/calendario/migrate-from-notion', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Notion-Token': token },
+      });
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.error || ('HTTP ' + r.status));
+      alert(
+        'Migração concluída ✓\n\n' +
+        `Total no Notion: ${data.total}\n` +
+        `Inseridos agora: ${data.inserted}\n` +
+        `Pulados (já existiam): ${data.skipped}`
+      );
+      // Recarrega kanban pra mostrar os novos cards
+      if (typeof loadCalendario === 'function') loadCalendario();
+      else location.reload();
+    } catch (err) {
+      alert('Erro na migração: ' + err.message);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = original;
+    }
+  });
 
   // Click no card (que não seja em botão) abre modal
   document.getElementById('kanban').addEventListener('click', (e) => {
