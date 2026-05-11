@@ -1,5 +1,5 @@
 // /api/kpis — Lê KPIs do mês da aba "kpis"
-import { readSheet, updateRange, clearRange, createTab, deleteSheetIfExists } from '../lib/sheets.js';
+import { readSheet, updateRange, clearRange, createTab, deleteSheetIfExists, listTabs, appendRow } from '../lib/sheets.js';
 
 // Parse "225,233,241,249,257" → [225,233,241,249,257]
 function parseTiers(raw) {
@@ -63,6 +63,74 @@ const SEED_KPIS = [
 ];
 
 const HEADER = ['Indicador', 'Meta', 'Realizado', 'Unidade', 'Atualizado em', 'Tiers'];
+const HISTORICO_TAB = 'kpis_historico';
+const HISTORICO_HEADER = ['Data', 'Indicador', 'Realizado', 'Meta', 'Pct'];
+
+// Garante que a aba kpis_historico existe
+async function ensureHistoricoTab() {
+  const tabs = await listTabs();
+  if (!tabs.includes(HISTORICO_TAB)) {
+    await createTab(HISTORICO_TAB, HISTORICO_HEADER);
+  }
+}
+
+// POST /api/admin/snapshot-kpis — captura snapshot do estado atual de todos KPIs
+// e adiciona uma linha por indicador na aba kpis_historico.
+// Idempotente por dia: se já tem snapshot do dia, não duplica.
+export async function snapshotKpis(req, res) {
+  try {
+    await ensureHistoricoTab();
+    const hoje = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+    const existing = await readSheet(HISTORICO_TAB);
+    const jaTemHoje = existing.some(r => String(r['Data'] || '').startsWith(hoje));
+    if (jaTemHoje) {
+      return res.json({ ok: true, skipped: true, message: `Snapshot de ${hoje} já existe.` });
+    }
+    const kpisRows = await readSheet('kpis');
+    const inserted = [];
+    for (const r of kpisRows) {
+      if (!r['Indicador']) continue;
+      const meta = parseFloat(String(r['Meta'] || '0').replace(',', '.')) || 0;
+      const realizado = parseFloat(String(r['Realizado'] || '0').replace(',', '.')) || 0;
+      const pct = meta > 0 ? Math.round((realizado / meta) * 100) : 0;
+      await appendRow(HISTORICO_TAB, {
+        'Data': hoje,
+        'Indicador': r['Indicador'],
+        'Realizado': realizado,
+        'Meta': meta,
+        'Pct': pct,
+      });
+      inserted.push(r['Indicador']);
+    }
+    res.json({ ok: true, data: hoje, snapshots: inserted.length, indicadores: inserted });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+}
+
+// GET /api/kpis/:indicador/historico — retorna histórico (últimos 60 dias) do indicador
+export async function getKpiHistorico(req, res) {
+  const indicador = decodeURIComponent(req.params.indicador || '').trim();
+  if (!indicador) return res.status(400).json({ error: 'Indicador obrigatório' });
+  try {
+    await ensureHistoricoTab();
+    const rows = await readSheet(HISTORICO_TAB);
+    const norm = s => String(s || '').toLowerCase().trim();
+    const filtered = rows
+      .filter(r => norm(r['Indicador']) === norm(indicador))
+      .map(r => ({
+        data: r['Data'] || '',
+        realizado: parseFloat(String(r['Realizado'] || '0').replace(',', '.')) || 0,
+        meta: parseFloat(String(r['Meta'] || '0').replace(',', '.')) || 0,
+        pct: parseInt(String(r['Pct'] || '0').replace(',', '.'), 10) || 0,
+      }))
+      .sort((a, b) => a.data.localeCompare(b.data))
+      .slice(-60); // últimos 60 dias
+    res.json({ indicador, historico: filtered });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+}
 
 // PATCH /api/kpis/:indicador — atualiza Realizado + Atualizado em
 // Body: { realizado: number }
