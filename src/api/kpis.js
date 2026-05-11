@@ -64,6 +64,42 @@ const SEED_KPIS = [
 
 const HEADER = ['Indicador', 'Meta', 'Realizado', 'Unidade', 'Atualizado em', 'Tiers'];
 
+// PATCH /api/kpis/:indicador — atualiza Realizado + Atualizado em
+// Body: { realizado: number }
+export async function updateKpi(req, res) {
+  const indicador = decodeURIComponent(req.params.indicador || '').trim();
+  const { realizado } = req.body || {};
+  if (!indicador) return res.status(400).json({ error: 'Indicador obrigatório' });
+  if (realizado === undefined || realizado === null || realizado === '') {
+    return res.status(400).json({ error: 'Campo "realizado" obrigatório' });
+  }
+  const numRealizado = parseFloat(String(realizado).replace(',', '.'));
+  if (isNaN(numRealizado)) return res.status(400).json({ error: 'realizado deve ser número' });
+
+  try {
+    const rows = await readSheet('kpis');
+    // Match case-insensitive e tolerante a espaços
+    const norm = s => String(s || '').toLowerCase().trim();
+    const target = rows.find(r => norm(r['Indicador']) === norm(indicador));
+    if (!target) return res.status(404).json({ error: `Indicador "${indicador}" não encontrado` });
+
+    const rowNum = target.__row;
+    const now = new Date().toISOString();
+    // Atualiza só C (Realizado) e E (Atualizado em) — não toca em Meta, Unidade, Tiers
+    await updateRange('kpis', `C${rowNum}:C${rowNum}`, [[numRealizado]]);
+    await updateRange('kpis', `E${rowNum}:E${rowNum}`, [[now]]);
+
+    res.json({
+      ok: true,
+      indicador,
+      realizado: numRealizado,
+      atualizadoEm: now,
+    });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+}
+
 export async function seedKpis(req, res) {
   try {
     // 1. Apaga a aba inteira pra resetar formatação herdada (datas etc)
