@@ -728,6 +728,66 @@
     }
     .publica-banner-item strong { color: var(--ink); font-weight: 600; }
 
+    /* BANNER INTELIGENTE DASHBOARD */
+    .smart-banner {
+      background: linear-gradient(135deg, var(--ink) 0%, #1a1a1a 100%);
+      color: white;
+      border-radius: var(--r-md);
+      padding: 18px 22px;
+      margin-bottom: 16px;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 14px;
+    }
+    @media (min-width: 900px) {
+      .smart-banner { grid-template-columns: 1.4fr 1fr; align-items: center; }
+    }
+    .smart-banner-title {
+      font-size: 11px; font-weight: 700;
+      letter-spacing: 0.08em; text-transform: uppercase;
+      color: rgba(255,255,255,0.55);
+      margin-bottom: 6px;
+    }
+    .smart-banner-msg {
+      font-size: 16px; font-weight: 600;
+      line-height: 1.35;
+    }
+    .smart-banner-msg strong {
+      color: var(--accent); font-weight: 700;
+    }
+    .smart-banner-msg .danger { color: #FCA5A5; }
+    .smart-banner-msg .warn { color: #FCD34D; }
+    .smart-banner-sub {
+      font-size: 12px;
+      color: rgba(255,255,255,0.65);
+      margin-top: 6px;
+      line-height: 1.5;
+    }
+    .smart-banner-stats {
+      display: flex; gap: 18px; flex-wrap: wrap;
+      padding-left: 0;
+    }
+    @media (min-width: 900px) {
+      .smart-banner-stats { padding-left: 18px; border-left: 1px solid rgba(255,255,255,0.12); }
+    }
+    .smart-stat { min-width: 90px; }
+    .smart-stat-label {
+      font-size: 10px; color: rgba(255,255,255,0.5);
+      text-transform: uppercase; letter-spacing: 0.05em;
+      margin-bottom: 3px;
+    }
+    .smart-stat-value {
+      font-size: 22px; font-weight: 700;
+      line-height: 1; letter-spacing: -0.02em;
+    }
+    .smart-stat-value.danger { color: #F87171; }
+    .smart-stat-value.warn { color: #FBBF24; }
+    .smart-stat-value.ok { color: #34D399; }
+    .smart-stat-meta {
+      font-size: 10px; color: rgba(255,255,255,0.5);
+      margin-top: 3px;
+    }
+
     /* MOVE BUTTONS NO KANBAN */
     .kanban-card-actions {
       display: flex; gap: 6px; margin-top: 8px;
@@ -975,6 +1035,7 @@
     <h1 class="page-title" id="greeting">Bom dia, time.</h1>
     <p class="page-sub">Cockpit central do marketing AB Group. Cada métrica reflete a saúde do funil este mês.</p>
 
+    <div id="dashboard-banner-inteligente"></div>
     <div id="dashboard-banner-publica"></div>
 
     <div class="kpis" id="kpis">
@@ -1442,6 +1503,96 @@
   });
 
   // ===== KPIs =====
+  // Conta dias úteis entre duas datas (exclusivo de fim de semana, inclui hoje)
+  function diasUteisAte(hoje, fim) {
+    let count = 0;
+    const d = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
+    const last = new Date(fim.getFullYear(), fim.getMonth(), fim.getDate());
+    while (d <= last) {
+      const dow = d.getDay();
+      if (dow !== 0 && dow !== 6) count++;
+      d.setDate(d.getDate() + 1);
+    }
+    return count;
+  }
+
+  function renderSmartBanner(kpis) {
+    const el = document.getElementById('dashboard-banner-inteligente');
+    if (!el || !Array.isArray(kpis) || kpis.length === 0) { if (el) el.innerHTML = ''; return; }
+
+    const hoje = new Date();
+    const ano = hoje.getFullYear();
+    const mes = hoje.getMonth();
+    const ultimoDia = new Date(ano, mes + 1, 0);
+    const totalDiasUteisMes = diasUteisAte(new Date(ano, mes, 1), ultimoDia);
+    const diasUteisRest = diasUteisAte(hoje, ultimoDia);
+    const diasUteisCorridos = totalDiasUteisMes - diasUteisRest + 1;
+
+    // KPI principal: Contratos (com fallback pra Leads se não houver)
+    const principal = kpis.find(k => k.indicador === 'Contratos') ||
+                      kpis.find(k => k.indicador === 'Leads') ||
+                      kpis[0];
+
+    const faltam = Math.max(0, principal.meta - principal.realizado);
+    const ritmoNecessario = diasUteisRest > 0 ? Math.ceil(faltam / diasUteisRest) : 0;
+    const ritmoAtual = diasUteisCorridos > 0 ? Math.round(principal.realizado / diasUteisCorridos) : 0;
+    const pct = principal.pct || 0;
+
+    // Mensagem contextual
+    let msgClass, msg, sub;
+    if (pct >= 100) {
+      msgClass = '';
+      msg = `<strong>Meta de ${principal.indicador} batida!</strong> ${formatNum(principal.realizado)}/${formatNum(principal.meta)} ${escapeHtml(principal.unidade || '')}.`;
+      sub = principal.proximoTier
+        ? `Próximo tier: <strong style="color:#fff;">${formatNum(principal.proximoTier)}</strong>. Faltam ${formatNum(principal.proximoTier - principal.realizado)} pra subir de nível.`
+        : `Mês fechado em alto desempenho. Bora estourar o mês.`;
+    } else if (pct >= 70) {
+      msgClass = 'warn';
+      msg = `Você está em <strong>${pct}% da meta</strong> de ${escapeHtml(principal.indicador)}. <span class="warn">No ritmo certo, falta pouco.</span>`;
+      sub = `Faltam <strong style="color:#fff;">${formatNum(faltam)}</strong> ${escapeHtml(principal.unidade || '')} em <strong style="color:#fff;">${diasUteisRest} dias úteis</strong>. Mantém o foco.`;
+    } else if (diasUteisCorridos <= 3) {
+      msgClass = '';
+      msg = `Mês começou. <strong>${diasUteisRest} dias úteis</strong> pra bater a meta de ${escapeHtml(principal.indicador)}.`;
+      sub = `Meta: <strong style="color:#fff;">${formatNum(principal.meta)}</strong> ${escapeHtml(principal.unidade || '')}. Ritmo sugerido: <strong style="color:#fff;">${ritmoNecessario}/dia</strong>.`;
+    } else {
+      msgClass = 'danger';
+      msg = `<span class="danger">Atenção:</span> você está em <strong class="danger">${pct}%</strong> da meta de ${escapeHtml(principal.indicador)} com <strong>${diasUteisRest} dias úteis</strong> restantes.`;
+      sub = `Pra bater: precisa de <strong style="color:#fff;">${ritmoNecessario}/dia</strong>. Ritmo atual: <strong style="color:#fff;">${ritmoAtual}/dia</strong>. Acelera.`;
+    }
+
+    // Estado dos KPIs do funil comercial (3 principais)
+    const funilOrder = ['Leads', 'Qualificados', 'Contratos'];
+    const funilStats = funilOrder
+      .map(name => kpis.find(k => k.indicador === name))
+      .filter(Boolean);
+
+    const statsHtml = funilStats.map(k => {
+      const cls = k.pct >= 100 ? 'ok' : k.pct >= 70 ? 'warn' : 'danger';
+      return `
+        <div class="smart-stat">
+          <div class="smart-stat-label">${escapeHtml(k.indicador)}</div>
+          <div class="smart-stat-value ${cls}">${k.pct}%</div>
+          <div class="smart-stat-meta">${formatNum(k.realizado)} / ${formatNum(k.meta)}</div>
+        </div>
+      `;
+    }).join('');
+
+    el.innerHTML = `
+      <div class="smart-banner">
+        <div>
+          <div class="smart-banner-title">${MES_NOMES[mes]} · dia ${hoje.getDate()} · ${diasUteisRest} dias úteis restantes</div>
+          <div class="smart-banner-msg">${msg}</div>
+          <div class="smart-banner-sub">${sub}</div>
+        </div>
+        <div class="smart-banner-stats">
+          ${statsHtml}
+        </div>
+      </div>
+    `;
+  }
+
+  const MES_NOMES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+
   async function loadKpis() {
     const data = await api('/api/kpis');
     const el = document.getElementById('kpis');
@@ -1455,6 +1606,7 @@
       showSetupBanner('A aba "kpis" está vazia ou ainda não foi criada na planilha. Crie ela com colunas <code>Indicador, Meta, Realizado, Unidade, Atualizado</code>.');
       return;
     }
+    renderSmartBanner(data.kpis);
     el.innerHTML = data.kpis.map(k => {
       const proximoTier = k.proximoTier
         ? `<div class="kpi-tier">↗ próx: ${formatNum(k.proximoTier)}</div>`
