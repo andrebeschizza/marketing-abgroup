@@ -10,6 +10,14 @@ function parseTiers(raw) {
     .filter(n => !isNaN(n) && n > 0);
 }
 
+// KPIs sincronizados automaticamente de fontes externas (não permite edição manual)
+const AUTO_KPIS = new Set([
+  'Leads',
+  'Qualificados',
+  'Atendidos pela equipe',
+  'Contratos',
+]);
+
 export async function getKpis(req, res) {
   try {
     const rows = await readSheet('kpis');
@@ -26,8 +34,9 @@ export async function getKpis(req, res) {
       if (tiers.length && realizado >= meta) {
         proximoTier = tiers.find(t => realizado < t) || null;
       }
+      const indicador = r['Indicador'] || '';
       return {
-        indicador: r['Indicador'] || '',
+        indicador,
         meta,
         realizado,
         unidade: r['Unidade'] || '',
@@ -36,6 +45,8 @@ export async function getKpis(req, res) {
         atualizado: r['Atualizado em'] || r['Atualizado'] || '',
         tiers,
         proximoTier,
+        auto: AUTO_KPIS.has(indicador), // true = sincronizado do ADVBOX, edição manual bloqueada
+        fonte: AUTO_KPIS.has(indicador) ? 'ADVBOX' : null,
       };
     });
     res.json({ kpis });
@@ -138,6 +149,9 @@ export async function updateKpi(req, res) {
   const indicador = decodeURIComponent(req.params.indicador || '').trim();
   const { realizado } = req.body || {};
   if (!indicador) return res.status(400).json({ error: 'Indicador obrigatório' });
+  if (AUTO_KPIS.has(indicador)) {
+    return res.status(409).json({ error: `"${indicador}" é auto-sincronizado do ADVBOX — não pode ser editado manualmente.` });
+  }
   if (realizado === undefined || realizado === null || realizado === '') {
     return res.status(400).json({ error: 'Campo "realizado" obrigatório' });
   }
