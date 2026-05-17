@@ -209,6 +209,15 @@
       border-color: var(--accent);
     }
     body.is-readonly .kpi-edit-btn { display: none !important; }
+    .kpi-auto-badge {
+      position: absolute; top: 6px; right: 6px;
+      font-size: 9px; font-weight: 700;
+      padding: 2px 7px;
+      background: var(--accent-soft); color: var(--accent-deep);
+      border-radius: 999px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
 
     /* CARD */
     .card {
@@ -1616,9 +1625,12 @@
         : '';
       // Cap visual da barra em 110% (mostra que estourou meta mas sem sair do card)
       const barW = Math.min(110, k.pct);
+      const editBtn = k.auto
+        ? `<span class="kpi-auto-badge" title="Sincronizado automaticamente de ${escapeHtml(k.fonte || 'fonte externa')} — não pode editar manualmente">🔒 ${escapeHtml(k.fonte || 'auto')}</span>`
+        : `<button class="kpi-edit-btn" title="Atualizar valor" type="button">✎</button>`;
       return `
-        <div class="kpi ${k.status}" data-indicador="${escapeHtml(k.indicador)}" data-realizado="${k.realizado}" data-unidade="${escapeHtml(k.unidade || '')}">
-          <button class="kpi-edit-btn" title="Atualizar valor" type="button">✎</button>
+        <div class="kpi ${k.status}${k.auto ? ' kpi-auto' : ''}" data-indicador="${escapeHtml(k.indicador)}" data-realizado="${k.realizado}" data-unidade="${escapeHtml(k.unidade || '')}" data-auto="${k.auto ? '1' : '0'}">
+          ${editBtn}
           <div class="kpi-label">${escapeHtml(k.indicador)}</div>
           <div class="kpi-value">${formatNum(k.realizado)}${k.unidade ? '<span style="font-size:13px;color:var(--ink-mute);"> ' + escapeHtml(k.unidade) + '</span>' : ''}</div>
           <div class="kpi-meta">Meta <strong>${formatNum(k.meta)}</strong> · ${k.pct}%</div>
