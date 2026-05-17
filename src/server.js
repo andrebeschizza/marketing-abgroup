@@ -16,6 +16,7 @@ import { listAtalhos } from './api/atalhos.js';
 import { listCalendario, createCalendarioItem, updateCalendarioItem, updateCalendarioStatus, deleteCalendarioItem, migrateFromNotion } from './api/calendario.js';
 import { listNotificacoes, createNotificacao, marcarLida, marcarTodasLidas } from './api/notificacoes.js';
 import { runAlertsHandler, runAlerts } from './jobs/alerts.js';
+import { syncAdvboxHandler, syncAdvbox } from './jobs/advbox-sync.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -120,6 +121,7 @@ app.patch('/api/kpis/:indicador', requireAdmin, updateKpi);
 app.post('/api/admin/seed-kpis', requireAdmin, seedKpis);
 app.post('/api/admin/snapshot-kpis', requireAdmin, snapshotKpis);
 app.post('/api/admin/run-alerts', requireAdmin, runAlertsHandler);
+app.post('/api/admin/sync-advbox', requireAdmin, syncAdvboxHandler);
 
 app.get('/api/demandas', listDemandas);
 app.post('/api/demandas', requireAdmin, createDemanda);
@@ -203,4 +205,24 @@ app.listen(PORT, () => {
   };
   setTimeout(runAlertsCron, 90 * 1000);
   setInterval(runAlertsCron, 24 * 60 * 60 * 1000);
+
+  // Cron interno: sync ADVBOX 1x a cada 4h (KPIs Leads/Qualificados/Atendidos/Contratos).
+  // 120s após boot pra não estourar rate limit no startup, depois 4h em 4h.
+  const runAdvboxSyncCron = async () => {
+    if (!process.env.ADVBOX_TOKEN) {
+      console.log('[cron] advbox-sync: pulado (ADVBOX_TOKEN não configurado)');
+      return;
+    }
+    try {
+      const out = await syncAdvbox();
+      console.log(`[cron] advbox-sync @ ${new Date().toISOString()} ·`, {
+        ok: out.sincronizados.length,
+        erros: out.erros.length,
+      });
+    } catch (e) {
+      console.error('[cron] advbox-sync failed:', e.message);
+    }
+  };
+  setTimeout(runAdvboxSyncCron, 120 * 1000);
+  setInterval(runAdvboxSyncCron, 4 * 60 * 60 * 1000);
 });
