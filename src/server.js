@@ -17,6 +17,7 @@ import { listCalendario, createCalendarioItem, updateCalendarioItem, updateCalen
 import { listNotificacoes, createNotificacao, marcarLida, marcarTodasLidas } from './api/notificacoes.js';
 import { runAlertsHandler, runAlerts } from './jobs/alerts.js';
 import { syncAdvboxHandler, syncAdvbox } from './jobs/advbox-sync.js';
+import { runAutoCalcHandler, runAutoCalc } from './jobs/auto-calc.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -122,6 +123,7 @@ app.post('/api/admin/seed-kpis', requireAdmin, seedKpis);
 app.post('/api/admin/snapshot-kpis', requireAdmin, snapshotKpis);
 app.post('/api/admin/run-alerts', requireAdmin, runAlertsHandler);
 app.post('/api/admin/sync-advbox', requireAdmin, syncAdvboxHandler);
+app.post('/api/admin/auto-calc', requireAdmin, runAutoCalcHandler);
 
 app.get('/api/demandas', listDemandas);
 app.post('/api/demandas', requireAdmin, createDemanda);
@@ -206,21 +208,32 @@ app.listen(PORT, () => {
   setTimeout(runAlertsCron, 90 * 1000);
   setInterval(runAlertsCron, 24 * 60 * 60 * 1000);
 
-  // Cron interno: sync ADVBOX 1x a cada 4h (KPIs Leads/Qualificados/Atendidos/Contratos).
+  // Cron interno: sync ADVBOX 1x a cada 4h (KPIs Leads/Qualificados/Atendidos/Contratos),
+  // SEGUIDO de auto-calc (Vídeos publicados + Conversão).
   // 120s após boot pra não estourar rate limit no startup, depois 4h em 4h.
   const runAdvboxSyncCron = async () => {
-    if (!process.env.ADVBOX_TOKEN) {
+    if (process.env.ADVBOX_TOKEN) {
+      try {
+        const out = await syncAdvbox();
+        console.log(`[cron] advbox-sync @ ${new Date().toISOString()} ·`, {
+          ok: out.sincronizados.length,
+          erros: out.erros.length,
+        });
+      } catch (e) {
+        console.error('[cron] advbox-sync failed:', e.message);
+      }
+    } else {
       console.log('[cron] advbox-sync: pulado (ADVBOX_TOKEN não configurado)');
-      return;
     }
+    // Auto-calc roda independente do ADVBOX (mas depois, pra Conversão pegar Leads/Contratos novos)
     try {
-      const out = await syncAdvbox();
-      console.log(`[cron] advbox-sync @ ${new Date().toISOString()} ·`, {
+      const out = await runAutoCalc();
+      console.log(`[cron] auto-calc @ ${new Date().toISOString()} ·`, {
         ok: out.sincronizados.length,
         erros: out.erros.length,
       });
     } catch (e) {
-      console.error('[cron] advbox-sync failed:', e.message);
+      console.error('[cron] auto-calc failed:', e.message);
     }
   };
   setTimeout(runAdvboxSyncCron, 120 * 1000);
