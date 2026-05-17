@@ -5,6 +5,7 @@
 //   - "Vídeos publicados" = count de cards do calendário com Status="Publicado" e Data Publicação no mês corrente
 //   - "Conversão Lead→Contrato" = (Contratos / Leads) × 100, arredondado pra inteiro
 import { readSheet, updateRange } from '../lib/sheets.js';
+import { countPostsBlogDoMes } from '../lib/blog-rss.js';
 
 function mesAtual() {
   const hoje = new Date();
@@ -54,10 +55,15 @@ export async function runAutoCalc() {
   const updates = [];
   const erros = [];
 
+  const noticias = await countPostsBlogDoMes().catch(e => { console.error('[blog-rss] erro:', e.message); return null; });
+
   const calculos = [
     { indicador: 'Vídeos publicados', valor: await calcVideosPublicados() },
     { indicador: 'Conversão Lead→Contrato', valor: calcConversao(rows) },
   ];
+  if (noticias !== null) {
+    calculos.push({ indicador: 'Notícias publicadas no blog', valor: noticias });
+  }
 
   for (const { indicador, valor } of calculos) {
     const row = rows.find(r => String(r['Indicador'] || '').trim() === indicador);
