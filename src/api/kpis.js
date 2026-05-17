@@ -19,6 +19,7 @@ const AUTO_KPIS_SOURCE = {
   'Contratos': 'ADVBOX',
   'Vídeos publicados': 'CALENDÁRIO',
   'Conversão Lead→Contrato': 'AUTO',
+  'Notícias publicadas no blog': 'BLOG RSS',
 };
 const AUTO_KPIS = new Set(Object.keys(AUTO_KPIS_SOURCE));
 
