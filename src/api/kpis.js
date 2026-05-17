@@ -10,13 +10,17 @@ function parseTiers(raw) {
     .filter(n => !isNaN(n) && n > 0);
 }
 
-// KPIs sincronizados automaticamente de fontes externas (não permite edição manual)
-const AUTO_KPIS = new Set([
-  'Leads',
-  'Qualificados',
-  'Atendidos pela equipe',
-  'Contratos',
-]);
+// KPIs sincronizados automaticamente (não permite edição manual)
+// Map: indicador → fonte (mostrado no badge da UI)
+const AUTO_KPIS_SOURCE = {
+  'Leads': 'ADVBOX',
+  'Qualificados': 'ADVBOX',
+  'Atendidos pela equipe': 'ADVBOX',
+  'Contratos': 'ADVBOX',
+  'Vídeos publicados': 'CALENDÁRIO',
+  'Conversão Lead→Contrato': 'AUTO',
+};
+const AUTO_KPIS = new Set(Object.keys(AUTO_KPIS_SOURCE));
 
 export async function getKpis(req, res) {
   try {
@@ -45,8 +49,8 @@ export async function getKpis(req, res) {
         atualizado: r['Atualizado em'] || r['Atualizado'] || '',
         tiers,
         proximoTier,
-        auto: AUTO_KPIS.has(indicador), // true = sincronizado do ADVBOX, edição manual bloqueada
-        fonte: AUTO_KPIS.has(indicador) ? 'ADVBOX' : null,
+        auto: AUTO_KPIS.has(indicador), // true = sincronizado automaticamente, edição manual bloqueada
+        fonte: AUTO_KPIS_SOURCE[indicador] || null,
       };
     });
     res.json({ kpis });
