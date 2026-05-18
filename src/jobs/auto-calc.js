@@ -7,6 +7,7 @@
 import { readSheet, updateRange, appendRow, listTabs, createTab } from '../lib/sheets.js';
 import { countPostsBlogDoMes } from '../lib/blog-rss.js';
 import { inscritosGanhosDoMes, getSubscriberCount } from '../lib/youtube.js';
+import { spendDoMesAtual } from '../lib/meta-ads.js';
 
 // Snapshot do total ATUAL de inscritos no YouTube (gravado na aba kpis_historico).
 // Permite calcular GANHO mensal: total_atual - menor_snapshot_do_mes.
@@ -107,6 +108,26 @@ export async function runAutoCalc() {
   }
   if (inscritosGanhos !== null) {
     calculos.push({ indicador: 'Inscritos YouTube ganhos', valor: inscritosGanhos });
+  }
+
+  // Meta Ads — Investimento total do mês (só roda se token configurado)
+  let metaSpend = null;
+  if (process.env.META_ACCESS_TOKEN && process.env.META_AD_ACCOUNT_ID) {
+    try {
+      metaSpend = await spendDoMesAtual();
+      calculos.push({ indicador: 'Investimento Ads total', valor: metaSpend });
+    } catch (e) {
+      console.error('[meta-ads] erro:', e.message);
+    }
+  }
+
+  // CPL auto-calc: requer leads (do ADVBOX, já no Sheet) + spend (Meta)
+  if (metaSpend !== null) {
+    const leads = readRealizado(rows, 'Leads');
+    if (leads > 0) {
+      const cpl = Math.round((metaSpend / leads) * 100) / 100;
+      calculos.push({ indicador: 'CPL', valor: cpl });
+    }
   }
 
   for (const { indicador, valor } of calculos) {
