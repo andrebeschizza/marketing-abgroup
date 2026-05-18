@@ -417,6 +417,12 @@
       line-height: 1.4;
     }
     .agente-acionar strong { color: var(--ink-soft); font-weight: 600; }
+    .agente-btn-acionar {
+      margin-top: 10px; width: 100%;
+      padding: 6px 10px; font-size: 11px;
+    }
+    .agente-acionavel { border-color: var(--accent); border-width: 1.5px; }
+    body.is-readonly .agente-btn-acionar { display: none !important; }
 
     /* ATALHOS */
     .atalhos-cat-title {
@@ -1348,6 +1354,30 @@
 
 </main>
 
+<!-- MODAL ACIONAR AGENTE -->
+<div class="modal-overlay" id="modal-agente">
+  <div class="modal" role="dialog" aria-modal="true" style="max-width: 640px;">
+    <div class="modal-head">
+      <div>
+        <span class="modal-title" id="modal-agente-title">Acionar agente</span>
+        <div id="modal-agente-desc" style="font-size:12px;color:var(--ink-mute);margin-top:3px;"></div>
+      </div>
+      <button class="modal-close" id="modal-agente-close" aria-label="Fechar">×</button>
+    </div>
+    <div class="modal-body">
+      <div style="background:var(--accent-soft);color:var(--accent-deep);padding:8px 12px;border-radius:6px;font-size:11px;font-weight:600;margin-bottom:14px;">
+        Saída: <span id="modal-agente-saida"></span>
+      </div>
+      <div class="form-grid" id="modal-agente-form"></div>
+      <div id="modal-agente-result" style="margin-top:14px;"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-secondary" id="modal-agente-cancel" onclick="document.getElementById('modal-agente').classList.remove('show')" type="button">Cancelar</button>
+      <button class="btn" id="modal-agente-run" type="button">🤖 Acionar</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL HISTÓRICO KPI -->
 <div class="modal-overlay" id="modal-kpi">
   <div class="modal" role="dialog" aria-modal="true" style="max-width: 720px;">
@@ -1991,7 +2021,7 @@
       return;
     }
     el.innerHTML = data.agentes.map(a => `
-      <div class="agente">
+      <div class="agente${a.acionavel ? ' agente-acionavel' : ''}">
         <div class="agente-head">
           <span class="agente-cod">${escapeHtml(a.codigo)}</span>
           <span class="agente-cat">${escapeHtml(a.categoria || '')}</span>
@@ -1999,9 +2029,110 @@
         <div class="agente-nome">${escapeHtml(a.nome)}</div>
         <div class="agente-funcao">${escapeHtml(a.funcao || '')}</div>
         ${a.acionar ? `<div class="agente-acionar"><strong>Quando acionar:</strong> ${escapeHtml(a.acionar)}</div>` : ''}
+        ${a.acionavel ? `<button class="btn btn-secondary agente-btn-acionar readonly-hide" data-codigo="${escapeHtml(a.acionavel)}" type="button">🎯 Acionar agora</button>` : ''}
       </div>
     `).join('');
   }
+
+  // ===== MODAL ACIONAR AGENTE =====
+  let agenteAtual = null;
+  document.getElementById('agentes-grid').addEventListener('click', async (e) => {
+    const btn = e.target.closest('.agente-btn-acionar');
+    if (!btn) return;
+    const codigo = btn.dataset.codigo;
+    await abrirModalAcionar(codigo);
+  });
+
+  async function abrirModalAcionar(codigo) {
+    // Busca a definição (inputs) do agente
+    const data = await api('/api/agentes/acionaveis');
+    if (data.__error) { alert('Erro: ' + data.__error); return; }
+    const conf = (data.agentes || []).find(a => a.codigo === codigo);
+    if (!conf) { alert('Agente não disponível: ' + codigo); return; }
+    agenteAtual = conf;
+    const overlay = document.getElementById('modal-agente');
+    document.getElementById('modal-agente-title').textContent = `🤖 ${conf.nome}`;
+    document.getElementById('modal-agente-desc').textContent = conf.descricao;
+    document.getElementById('modal-agente-saida').textContent =
+      conf.outputType === 'card' ? '📅 Cria card no Calendário' :
+      conf.outputType === 'demanda' ? '📋 Cria demanda nova' :
+      '📝 Retorna texto';
+    const form = document.getElementById('modal-agente-form');
+    form.innerHTML = conf.inputs.map(f => {
+      if (f.type === 'select') {
+        return `<div class="field">
+          <label class="field-label">${escapeHtml(f.label)}${f.required ? ' *' : ''}</label>
+          <select class="select" name="${escapeHtml(f.name)}" ${f.required ? 'required' : ''}>
+            <option value="">Selecione…</option>
+            ${f.options.map(o => `<option>${escapeHtml(o)}</option>`).join('')}
+          </select>
+        </div>`;
+      }
+      if (f.type === 'textarea') {
+        return `<div class="field">
+          <label class="field-label">${escapeHtml(f.label)}${f.required ? ' *' : ''}</label>
+          <textarea class="textarea" name="${escapeHtml(f.name)}" placeholder="${escapeHtml(f.placeholder || '')}" ${f.required ? 'required' : ''}></textarea>
+        </div>`;
+      }
+      return `<div class="field">
+        <label class="field-label">${escapeHtml(f.label)}${f.required ? ' *' : ''}</label>
+        <input class="input" type="text" name="${escapeHtml(f.name)}" placeholder="${escapeHtml(f.placeholder || '')}" ${f.required ? 'required' : ''}>
+      </div>`;
+    }).join('');
+    document.getElementById('modal-agente-result').innerHTML = '';
+    overlay.classList.add('show');
+  }
+
+  document.getElementById('modal-agente-close').addEventListener('click', () => {
+    document.getElementById('modal-agente').classList.remove('show');
+  });
+  document.getElementById('modal-agente').addEventListener('click', (e) => {
+    if (e.target.id === 'modal-agente') document.getElementById('modal-agente').classList.remove('show');
+  });
+
+  document.getElementById('modal-agente-run').addEventListener('click', async () => {
+    if (!agenteAtual) return;
+    const form = document.getElementById('modal-agente-form');
+    const inputs = {};
+    form.querySelectorAll('[name]').forEach(el => { inputs[el.name] = el.value.trim(); });
+    // Valida required
+    for (const f of agenteAtual.inputs) {
+      if (f.required && !inputs[f.name]) { alert(`Campo obrigatório: ${f.label}`); return; }
+    }
+    const btn = document.getElementById('modal-agente-run');
+    btn.disabled = true; btn.textContent = '🤖 Pensando…';
+    const result = document.getElementById('modal-agente-result');
+    result.innerHTML = '<div style="color:var(--ink-mute);font-size:12px;">Aguardando Claude API…</div>';
+    try {
+      const r = await fetch(`/api/agentes/${encodeURIComponent(agenteAtual.codigo)}/acionar`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(inputs),
+      });
+      const j = await r.json();
+      if (!r.ok || !j.ok) throw new Error(j.error || ('HTTP ' + r.status));
+      const dur = Math.round((j.duracaoMs || 0) / 100) / 10;
+      const savedMsg = j.savedAs?.tipo === 'card'
+        ? `✓ Card criado no calendário: <strong>${escapeHtml(j.savedAs.titulo)}</strong>`
+        : j.savedAs?.tipo === 'demanda'
+        ? `✓ Demanda criada: <strong>${escapeHtml(j.savedAs.titulo)}</strong>`
+        : `✓ Concluído`;
+      result.innerHTML = `
+        <div class="form-result success">${savedMsg} <small style="color:var(--ink-mute);">· ${dur}s · ${j.usage?.input_tokens || 0}+${j.usage?.output_tokens || 0} tokens</small></div>
+        <details style="margin-top:10px;font-size:12px;">
+          <summary style="cursor:pointer;color:var(--ink-soft);">Ver resposta completa</summary>
+          <pre style="white-space:pre-wrap;background:var(--bg-subtle);padding:12px;border-radius:6px;font-size:11px;margin-top:8px;max-height:400px;overflow:auto;">${escapeHtml(j.output)}</pre>
+        </details>
+      `;
+      // Recarrega calendário se foi card
+      if (j.savedAs?.tipo === 'card' && typeof loadCalendario === 'function') loadCalendario();
+      if (j.savedAs?.tipo === 'demanda' && typeof loadDemandas === 'function') loadDemandas();
+    } catch (err) {
+      result.innerHTML = `<div class="form-result error">✗ ${escapeHtml(err.message)}</div>`;
+    } finally {
+      btn.disabled = false; btn.textContent = '🤖 Acionar';
+    }
+  });
 
   // ===== ATALHOS =====
   async function loadAtalhos() {
