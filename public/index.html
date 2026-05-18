@@ -746,6 +746,18 @@
       font-size: 12px; color: var(--ink-mute);
       font-style: italic;
     }
+    .dashboard-last-update {
+      font-size: 11px; color: var(--ink-mute);
+    }
+    .dashboard-last-update strong { color: var(--ink-soft); font-weight: 600; }
+    .btn-link {
+      background: none; border: none;
+      font-size: 11px; color: var(--ink-mute);
+      cursor: pointer; padding: 4px 8px;
+      margin-left: auto;
+      border-radius: 4px;
+    }
+    .btn-link:hover { background: var(--bg-subtle); color: var(--ink-soft); }
     #btn-sync-all { padding: 6px 14px; font-size: 12px; }
     #btn-sync-all.loading { opacity: 0.6; cursor: wait; }
     body.is-readonly .dashboard-sync-row { display: none !important; }
@@ -1059,7 +1071,9 @@
 
     <div class="dashboard-sync-row readonly-hide">
       <button class="btn btn-secondary" id="btn-sync-all" type="button">🔄 Sincronizar agora</button>
+      <span class="dashboard-last-update" id="dashboard-last-update"></span>
       <span class="dashboard-sync-status" id="dashboard-sync-status"></span>
+      <button class="btn-link" id="btn-reset-yt" type="button" title="Apaga snapshots do mês — útil pra recalibrar contagem de inscritos">↻ reset baseline YT</button>
     </div>
     <div id="dashboard-banner-inteligente"></div>
     <div id="dashboard-banner-publica"></div>
@@ -1633,6 +1647,7 @@
       return;
     }
     renderSmartBanner(data.kpis);
+    renderLastUpdate(data.kpis);
     el.innerHTML = data.kpis.map(k => {
       const proximoTier = k.proximoTier
         ? `<div class="kpi-tier">↗ próx: ${formatNum(k.proximoTier)}</div>`
@@ -1656,6 +1671,39 @@
         </div>
       `;
     }).join('');
+  }
+
+  // "Atualizado há X min" — pega o "atualizado" mais recente entre KPIs auto
+  function renderLastUpdate(kpis) {
+    const el = document.getElementById('dashboard-last-update');
+    if (!el || !Array.isArray(kpis)) return;
+    const autoKpis = kpis.filter(k => k.auto && k.atualizado);
+    if (autoKpis.length === 0) { el.innerHTML = ''; return; }
+    const datas = autoKpis.map(k => new Date(k.atualizado).getTime()).filter(t => !isNaN(t));
+    if (datas.length === 0) { el.innerHTML = ''; return; }
+    const maisRecente = Math.max(...datas);
+    el.innerHTML = `· última sync: <strong>${formatRelative(new Date(maisRecente).toISOString())}</strong>`;
+  }
+
+  // Botão Reset Baseline YouTube
+  const btnResetYt = document.getElementById('btn-reset-yt');
+  if (btnResetYt) {
+    btnResetYt.addEventListener('click', async () => {
+      if (!confirm('Resetar baseline do YouTube?\n\nIsso apaga os snapshots do mês corrente. Próxima sincronização vai começar a contar do total atual.\n\nÚtil quando: começa novo mês ou nova campanha.')) return;
+      btnResetYt.disabled = true;
+      btnResetYt.textContent = 'Resetando…';
+      try {
+        const r = await fetch('/api/admin/reset-baseline-yt', { method: 'POST' });
+        const j = await r.json();
+        if (!r.ok) throw new Error(j.error || ('HTTP ' + r.status));
+        alert(`✓ ${j.message}`);
+      } catch (err) {
+        alert('Erro: ' + err.message);
+      } finally {
+        btnResetYt.disabled = false;
+        btnResetYt.textContent = '↻ reset baseline YT';
+      }
+    });
   }
 
   // Botão "Sincronizar agora" — dispara sync ADVBOX + auto-calc
