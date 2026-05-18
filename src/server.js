@@ -10,7 +10,7 @@ import { requireAuth, requireAdmin, validateLogin, PERFIS } from './middleware/a
 import { ping } from './lib/sheets.js';
 import { getKpis, seedKpis, updateKpi, snapshotKpis, getKpiHistorico } from './api/kpis.js';
 import { listDemandas, createDemanda, updateDemandaStatus } from './api/demandas.js';
-import { listAgentes } from './api/agentes.js';
+import { listAgentes, listAcionaveis, acionarAgente } from './api/agentes.js';
 import { listAlertas, createAlerta } from './api/alertas.js';
 import { listAtalhos } from './api/atalhos.js';
 import { listCalendario, createCalendarioItem, updateCalendarioItem, updateCalendarioStatus, deleteCalendarioItem, migrateFromNotion } from './api/calendario.js';
@@ -178,6 +178,8 @@ app.post('/api/demandas', requireAdmin, createDemanda);
 app.patch('/api/demandas/:row/status', requireAdmin, updateDemandaStatus);
 
 app.get('/api/agentes', listAgentes);
+app.get('/api/agentes/acionaveis', listAcionaveis);
+app.post('/api/agentes/:codigo/acionar', requireAdmin, acionarAgente);
 
 app.get('/api/alertas', listAlertas);
 app.post('/api/alertas', requireAdmin, createAlerta);
