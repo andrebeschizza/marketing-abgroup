@@ -21,6 +21,8 @@ const AUTO_KPIS_SOURCE = {
   'Conversão Lead→Contrato': 'AUTO',
   'Notícias publicadas no blog': 'BLOG RSS',
   'Inscritos YouTube ganhos': 'YOUTUBE',
+  'Investimento Ads total': 'META ADS',
+  'CPL': 'AUTO',
 };
 const AUTO_KPIS = new Set(Object.keys(AUTO_KPIS_SOURCE));
 
