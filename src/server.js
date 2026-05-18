@@ -124,6 +124,10 @@ app.post('/api/admin/snapshot-kpis', requireAdmin, snapshotKpis);
 app.post('/api/admin/run-alerts', requireAdmin, runAlertsHandler);
 app.post('/api/admin/sync-advbox', requireAdmin, syncAdvboxHandler);
 app.post('/api/admin/auto-calc', requireAdmin, runAutoCalcHandler);
+app.get('/api/admin/meta-healthcheck', requireAdmin, async (req, res) => {
+  const { metaHealthcheck } = await import('./lib/meta-ads.js');
+  res.json(await metaHealthcheck());
+});
 
 app.get('/api/demandas', listDemandas);
 app.post('/api/demandas', requireAdmin, createDemanda);
