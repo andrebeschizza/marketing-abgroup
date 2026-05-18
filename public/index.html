@@ -183,6 +183,15 @@
       background: var(--accent-soft);
       display: inline-block;
     }
+    .kpi-delta {
+      font-size: 10px; font-weight: 600;
+      margin-top: 6px;
+      padding: 1px 6px; border-radius: 4px;
+      display: inline-block;
+    }
+    .kpi-delta.delta-up { color: var(--accent-deep); background: var(--accent-soft); }
+    .kpi-delta.delta-down { color: var(--danger); background: var(--danger-soft); }
+    .kpi-delta.delta-flat { color: var(--ink-mute); background: var(--bg-subtle); }
     .kpi-updated {
       font-size: 9px; color: var(--ink-mute);
       margin-top: 6px;
@@ -1660,6 +1669,15 @@
       const editBtn = k.auto
         ? `<span class="kpi-auto-badge" title="Sincronizado automaticamente de ${escapeHtml(k.fonte || 'fonte externa')} — não pode editar manualmente">🔒 ${escapeHtml(k.fonte || 'auto')}</span>`
         : `<button class="kpi-edit-btn" title="Atualizar valor" type="button">✎</button>`;
+      // Delta vs início do mês (só se tem ≥2 pontos no histórico)
+      let deltaHtml = '';
+      if (k.delta && k.delta.pontos >= 2) {
+        const v = k.delta.valor;
+        const arrow = v > 0 ? '↗' : v < 0 ? '↘' : '→';
+        const cls = v > 0 ? 'delta-up' : v < 0 ? 'delta-down' : 'delta-flat';
+        const sign = v > 0 ? '+' : '';
+        deltaHtml = `<div class="kpi-delta ${cls}" title="Variação desde o início do mês (baseline ${formatNum(k.delta.baseline)})">${arrow} ${sign}${formatNum(v)} no mês</div>`;
+      }
       return `
         <div class="kpi ${k.status}${k.auto ? ' kpi-auto' : ''}" data-indicador="${escapeHtml(k.indicador)}" data-realizado="${k.realizado}" data-unidade="${escapeHtml(k.unidade || '')}" data-auto="${k.auto ? '1' : '0'}">
           ${editBtn}
@@ -1667,7 +1685,7 @@
           <div class="kpi-value">${formatNum(k.realizado)}${k.unidade ? '<span style="font-size:13px;color:var(--ink-mute);"> ' + escapeHtml(k.unidade) + '</span>' : ''}</div>
           <div class="kpi-meta">Meta <strong>${formatNum(k.meta)}</strong> · ${k.pct}%</div>
           <div class="kpi-bar"><div class="kpi-fill" style="width:${barW}%"></div></div>
-          ${proximoTier}${atualizado}
+          ${deltaHtml}${proximoTier}${atualizado}
         </div>
       `;
     }).join('');
