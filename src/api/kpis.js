@@ -26,9 +26,41 @@ const AUTO_KPIS_SOURCE = {
 };
 const AUTO_KPIS = new Set(Object.keys(AUTO_KPIS_SOURCE));
 
+// Calcula delta de cada KPI vs primeiro snapshot do mês corrente.
+// Retorna Map<indicador, {delta: number, baseline: number, periodo: 'mês corrente'|'sem histórico'}>
+async function computeDeltas() {
+  const result = new Map();
+  try {
+    const hist = await readSheet('kpis_historico');
+    const hoje = new Date();
+    const prefixoMes = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}`;
+    // Agrupa por indicador → array de {data, realizado}
+    const porIndicador = {};
+    for (const r of hist) {
+      const ind = String(r['Indicador'] || '').trim();
+      if (!ind || ind.startsWith('_')) continue; // pula snapshots internos (_YouTube Total)
+      const data = String(r['Data'] || '');
+      if (!data.startsWith(prefixoMes)) continue;
+      const v = parseFloat(String(r['Realizado'] || '0').replace(',', '.')) || 0;
+      if (!porIndicador[ind]) porIndicador[ind] = [];
+      porIndicador[ind].push({ data, valor: v });
+    }
+    // Pra cada indicador, pega menor valor do mês como baseline
+    for (const [ind, pontos] of Object.entries(porIndicador)) {
+      pontos.sort((a, b) => a.data.localeCompare(b.data));
+      const baseline = pontos[0].valor;
+      result.set(ind, { baseline, periodo: 'mês corrente', pontos: pontos.length });
+    }
+  } catch (e) {
+    // sem histórico, retorna vazio
+  }
+  return result;
+}
+
 export async function getKpis(req, res) {
   try {
     const rows = await readSheet('kpis');
+    const deltas = await computeDeltas();
     const kpis = rows.map(r => {
       const meta = parseFloat(String(r['Meta'] || '0').replace(/[^\d,.-]/g, '').replace(',', '.')) || 0;
       const realizado = parseFloat(String(r['Realizado'] || '0').replace(/[^\d,.-]/g, '').replace(',', '.')) || 0;
@@ -43,6 +75,11 @@ export async function getKpis(req, res) {
         proximoTier = tiers.find(t => realizado < t) || null;
       }
       const indicador = r['Indicador'] || '';
+      // Delta vs início do mês (só pra KPIs com histórico)
+      const deltaInfo = deltas.get(indicador);
+      const delta = deltaInfo
+        ? { valor: realizado - deltaInfo.baseline, baseline: deltaInfo.baseline, periodo: deltaInfo.periodo, pontos: deltaInfo.pontos }
+        : null;
       return {
         indicador,
         meta,
@@ -55,6 +92,7 @@ export async function getKpis(req, res) {
         proximoTier,
         auto: AUTO_KPIS.has(indicador), // true = sincronizado automaticamente, edição manual bloqueada
         fonte: AUTO_KPIS_SOURCE[indicador] || null,
+        delta,
       };
     });
     res.json({ kpis });
