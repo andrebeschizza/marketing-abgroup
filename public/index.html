@@ -737,6 +737,19 @@
     }
     .publica-banner-item strong { color: var(--ink); font-weight: 600; }
 
+    /* LINHA SYNC TUDO */
+    .dashboard-sync-row {
+      display: flex; align-items: center; gap: 12px;
+      margin-bottom: 12px;
+    }
+    .dashboard-sync-status {
+      font-size: 12px; color: var(--ink-mute);
+      font-style: italic;
+    }
+    #btn-sync-all { padding: 6px 14px; font-size: 12px; }
+    #btn-sync-all.loading { opacity: 0.6; cursor: wait; }
+    body.is-readonly .dashboard-sync-row { display: none !important; }
+
     /* BANNER INTELIGENTE DASHBOARD */
     .smart-banner {
       background: linear-gradient(135deg, var(--ink) 0%, #1a1a1a 100%);
@@ -1044,6 +1057,10 @@
     <h1 class="page-title" id="greeting">Bom dia, time.</h1>
     <p class="page-sub">Cockpit central do marketing AB Group. Cada métrica reflete a saúde do funil este mês.</p>
 
+    <div class="dashboard-sync-row readonly-hide">
+      <button class="btn btn-secondary" id="btn-sync-all" type="button">🔄 Sincronizar agora</button>
+      <span class="dashboard-sync-status" id="dashboard-sync-status"></span>
+    </div>
     <div id="dashboard-banner-inteligente"></div>
     <div id="dashboard-banner-publica"></div>
 
@@ -1639,6 +1656,35 @@
         </div>
       `;
     }).join('');
+  }
+
+  // Botão "Sincronizar agora" — dispara sync ADVBOX + auto-calc
+  const btnSyncAll = document.getElementById('btn-sync-all');
+  const syncStatus = document.getElementById('dashboard-sync-status');
+  if (btnSyncAll) {
+    btnSyncAll.addEventListener('click', async () => {
+      btnSyncAll.disabled = true;
+      btnSyncAll.classList.add('loading');
+      btnSyncAll.textContent = '🔄 Sincronizando...';
+      syncStatus.textContent = '';
+      try {
+        const r = await fetch('/api/admin/sync-all', { method: 'POST' });
+        const j = await r.json();
+        if (!r.ok) throw new Error(j.error || ('HTTP ' + r.status));
+        const adv = j.advbox?.sincronizados?.length || 0;
+        const auto = j.autoCalc?.sincronizados?.length || 0;
+        const dur = Math.round((j.duracaoMs || 0) / 100) / 10;
+        syncStatus.textContent = `✓ ${adv + auto} KPIs atualizados em ${dur}s`;
+        await loadKpis();
+      } catch (err) {
+        syncStatus.textContent = '✗ ' + err.message;
+      } finally {
+        btnSyncAll.disabled = false;
+        btnSyncAll.classList.remove('loading');
+        btnSyncAll.textContent = '🔄 Sincronizar agora';
+        setTimeout(() => { syncStatus.textContent = ''; }, 8000);
+      }
+    });
   }
 
   // Click no lápis → atualiza Realizado via prompt. Click no resto do card → abre histórico.
