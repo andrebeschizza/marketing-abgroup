@@ -129,6 +129,24 @@ app.get('/api/admin/meta-healthcheck', requireAdmin, async (req, res) => {
   res.json(await metaHealthcheck());
 });
 
+// Sync de TUDO — botão "Sincronizar agora" no dashboard
+app.post('/api/admin/sync-all', requireAdmin, async (req, res) => {
+  const inicio = Date.now();
+  const out = {};
+  try {
+    if (process.env.ADVBOX_TOKEN) {
+      out.advbox = await syncAdvbox();
+    } else {
+      out.advbox = { skipped: 'ADVBOX_TOKEN não configurado' };
+    }
+  } catch (e) { out.advbox = { error: e.message }; }
+  try {
+    out.autoCalc = await runAutoCalc();
+  } catch (e) { out.autoCalc = { error: e.message }; }
+  out.duracaoMs = Date.now() - inicio;
+  res.json({ ok: true, ...out });
+});
+
 app.get('/api/demandas', listDemandas);
 app.post('/api/demandas', requireAdmin, createDemanda);
 app.patch('/api/demandas/:row/status', requireAdmin, updateDemandaStatus);
