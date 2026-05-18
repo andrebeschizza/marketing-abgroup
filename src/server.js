@@ -129,6 +129,32 @@ app.get('/api/admin/meta-healthcheck', requireAdmin, async (req, res) => {
   res.json(await metaHealthcheck());
 });
 
+// Reset baseline YouTube — apaga os snapshots de "_YouTube Total" do mês corrente
+// Útil quando: muda de mês, começa campanha nova, ou quer recalibrar.
+// Próximo cron vai criar baseline novo a partir do total atual.
+app.post('/api/admin/reset-baseline-yt', requireAdmin, async (req, res) => {
+  try {
+    const { readSheet, deleteRow } = await import('./lib/sheets.js');
+    const hoje = new Date();
+    const prefixo = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}`;
+    const rows = await readSheet('kpis_historico');
+    // Identifica rows a deletar (mês atual + indicador _YouTube Total)
+    const alvos = rows
+      .filter(r => String(r['Indicador'] || '') === '_YouTube Total')
+      .filter(r => String(r['Data'] || '').startsWith(prefixo))
+      .map(r => r.__row)
+      .sort((a, b) => b - a); // deleta de baixo pra cima pra preservar índices
+    let apagados = 0;
+    for (const row of alvos) {
+      await deleteRow('kpis_historico', row);
+      apagados++;
+    }
+    res.json({ ok: true, apagados, mes: prefixo, message: `${apagados} snapshots de YouTube removidos. Próximo sync recria baseline.` });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // Sync de TUDO — botão "Sincronizar agora" no dashboard
 app.post('/api/admin/sync-all', requireAdmin, async (req, res) => {
   const inicio = Date.now();
