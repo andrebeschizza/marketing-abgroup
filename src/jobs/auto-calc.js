@@ -4,8 +4,35 @@
 // KPIs cobertos:
 //   - "Vídeos publicados" = count de cards do calendário com Status="Publicado" e Data Publicação no mês corrente
 //   - "Conversão Lead→Contrato" = (Contratos / Leads) × 100, arredondado pra inteiro
-import { readSheet, updateRange } from '../lib/sheets.js';
+import { readSheet, updateRange, appendRow, listTabs, createTab } from '../lib/sheets.js';
 import { countPostsBlogDoMes } from '../lib/blog-rss.js';
+import { inscritosGanhosDoMes, getSubscriberCount } from '../lib/youtube.js';
+
+// Snapshot do total ATUAL de inscritos no YouTube (gravado na aba kpis_historico).
+// Permite calcular GANHO mensal: total_atual - menor_snapshot_do_mes.
+const YT_INDICADOR_SNAPSHOT = '_YouTube Total';
+
+async function snapshotYoutubeTotal() {
+  // Garante aba kpis_historico (Sprint 7 já cria, mas paranoia)
+  const tabs = await listTabs();
+  if (!tabs.includes('kpis_historico')) {
+    await createTab('kpis_historico', ['Data', 'Indicador', 'Realizado', 'Meta', 'Pct']);
+  }
+  const hoje = new Date().toISOString().slice(0, 10);
+  const rows = await readSheet('kpis_historico');
+  // Idempotente por dia
+  const ja = rows.some(r => String(r['Data'] || '').startsWith(hoje) && String(r['Indicador'] || '') === YT_INDICADOR_SNAPSHOT);
+  if (ja) return null;
+  const { subscribers } = await getSubscriberCount();
+  await appendRow('kpis_historico', {
+    'Data': hoje,
+    'Indicador': YT_INDICADOR_SNAPSHOT,
+    'Realizado': subscribers,
+    'Meta': 0,
+    'Pct': 0,
+  });
+  return subscribers;
+}
 
 function mesAtual() {
   const hoje = new Date();
@@ -57,12 +84,29 @@ export async function runAutoCalc() {
 
   const noticias = await countPostsBlogDoMes().catch(e => { console.error('[blog-rss] erro:', e.message); return null; });
 
+  // YouTube: snapshot do total atual + cálculo de ganho do mês
+  let inscritosGanhos = null;
+  try {
+    await snapshotYoutubeTotal(); // idempotente por dia
+    const historico = await readSheet('kpis_historico');
+    const ytData = await inscritosGanhosDoMes(
+      historico.filter(r => String(r['Indicador'] || '') === YT_INDICADOR_SNAPSHOT)
+                .map(r => ({ Indicador: 'Inscritos YouTube ganhos', Data: r['Data'], Realizado: r['Realizado'] }))
+    );
+    inscritosGanhos = ytData.ganhoNoMes;
+  } catch (e) {
+    console.error('[youtube] erro:', e.message);
+  }
+
   const calculos = [
     { indicador: 'Vídeos publicados', valor: await calcVideosPublicados() },
     { indicador: 'Conversão Lead→Contrato', valor: calcConversao(rows) },
   ];
   if (noticias !== null) {
     calculos.push({ indicador: 'Notícias publicadas no blog', valor: noticias });
+  }
+  if (inscritosGanhos !== null) {
+    calculos.push({ indicador: 'Inscritos YouTube ganhos', valor: inscritosGanhos });
   }
 
   for (const { indicador, valor } of calculos) {
