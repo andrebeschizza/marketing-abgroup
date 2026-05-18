@@ -20,6 +20,7 @@ const AUTO_KPIS_SOURCE = {
   'Vídeos publicados': 'CALENDÁRIO',
   'Conversão Lead→Contrato': 'AUTO',
   'Notícias publicadas no blog': 'BLOG RSS',
+  'Inscritos YouTube ganhos': 'YOUTUBE',
 };
 const AUTO_KPIS = new Set(Object.keys(AUTO_KPIS_SOURCE));
 
