@@ -1,5 +1,8 @@
-// /api/agentes — Mapa dos 16 agentes
-import { readSheet } from '../lib/sheets.js';
+// /api/agentes — Mapa dos 16 agentes + acionamento via Claude API
+import { readSheet, appendRow } from '../lib/sheets.js';
+import { askClaude } from '../lib/claude.js';
+import { AGENTES, listAgentesAcionaveis } from '../agentes/registry.js';
+import { notify } from './notificacoes.js';
 
 // Fallback se aba "agentes" não existir ou estiver vazia
 const AGENTES_BASE = [
@@ -42,8 +45,118 @@ export async function listAgentes(req, res) {
       }));
 
     const agentes = fromSheet.length > 0 ? fromSheet : AGENTES_BASE;
-    res.json({ total: agentes.length, agentes });
+    // Marca quais agentes têm botão "Acionar" disponível
+    const acionaveis = listAgentesAcionaveis();
+    const acionaveisMap = Object.fromEntries(acionaveis.map(a => [a.codigo, a]));
+    const enriched = agentes.map(a => {
+      // Tenta achar pelo código tipo "Ag. 7B" → "ag7b-..."
+      const norm = String(a.codigo || '').toLowerCase().replace(/[\s\.]/g, '');
+      const match = acionaveis.find(ag => ag.codigo.replace(/-.*/, '').toLowerCase().includes(norm));
+      return { ...a, acionavel: match ? match.codigo : null };
+    });
+    res.json({ total: enriched.length, agentes: enriched });
   } catch (e) {
     res.json({ total: AGENTES_BASE.length, agentes: AGENTES_BASE });
+  }
+}
+
+// GET /api/agentes/acionaveis — lista agentes que têm botão "Acionar" disponível (com inputs)
+export async function listAcionaveis(req, res) {
+  res.json({ agentes: listAgentesAcionaveis() });
+}
+
+// POST /api/agentes/:codigo/acionar — chama Claude API com a skill, cria card/demanda/notif
+export async function acionarAgente(req, res) {
+  const codigo = req.params.codigo;
+  const conf = AGENTES[codigo];
+  if (!conf) return res.status(404).json({ error: `Agente "${codigo}" não disponível` });
+
+  const inputs = req.body || {};
+  // Validação básica dos inputs obrigatórios
+  for (const field of conf.inputs) {
+    if (field.required && !inputs[field.name]) {
+      return res.status(400).json({ error: `Campo obrigatório: ${field.label}` });
+    }
+  }
+
+  // Monta o userMessage com os inputs preenchidos
+  const userMessage = conf.inputs.map(f => {
+    const val = inputs[f.name];
+    return val ? `**${f.label}:** ${val}` : null;
+  }).filter(Boolean).join('\n');
+
+  try {
+    // Chama Claude
+    const inicio = Date.now();
+    const resp = await askClaude({
+      system: conf.skill,
+      userMessage,
+      maxTokens: conf.maxTokens || 3000,
+    });
+    const duracao = Date.now() - inicio;
+
+    // Aplica parseOutput (cada agente tem o seu)
+    const payload = conf.parseOutput(resp.content, inputs);
+
+    let savedAs = null;
+    if (conf.outputType === 'card') {
+      // Cria card no calendário (mesmo formato que createCalendarioItem)
+      const { CALENDARIO_HEADERS } = await import('../lib/notion.js').catch(() => ({ CALENDARIO_HEADERS: [] }));
+      await appendRow('calendario', {
+        'Título': payload.titulo,
+        'Marca': payload.marca || '',
+        'Tipo Conteúdo': payload.tipoConteudo || '',
+        'Apresentador': payload.apresentador || '',
+        'Plataformas': payload.plataformas || '',
+        'Status': payload.status || 'Gravado',
+        'Mês': payload.mes || '',
+        'Legenda': payload.legenda || '',
+        'Notas': payload.notas || '',
+        'Atualizado em': new Date().toISOString(),
+      });
+      savedAs = { tipo: 'card', titulo: payload.titulo };
+      await notify({
+        tipo: 'agente_executado',
+        titulo: `🤖 ${conf.nome} criou card: ${payload.titulo}`,
+        detalhe: `Acionado em ${new Date().toLocaleString('pt-BR')}`,
+        url: '/#calendario',
+        para: 'mkt',
+        marca: payload.marca || '',
+      });
+    } else if (conf.outputType === 'demanda') {
+      await appendRow('demandas', {
+        'Tipo': payload.tipo || '',
+        'Demanda': payload.demanda || '',
+        'Empresa': payload.empresa || '',
+        'Prioridade': payload.prioridade || 'Normal',
+        'Solicitante': payload.solicitante || '',
+        'Briefing': payload.briefing || '',
+        'Prazo': payload.prazo || '',
+        'Status': 'Não iniciada',
+        'Submetido em': new Date().toISOString(),
+      });
+      savedAs = { tipo: 'demanda', titulo: payload.demanda };
+      await notify({
+        tipo: 'agente_executado',
+        titulo: `🤖 ${conf.nome} criou demanda: ${payload.demanda}`,
+        detalhe: `Acionado em ${new Date().toLocaleString('pt-BR')}`,
+        url: '/#demandas',
+        para: 'mkt',
+      });
+    } else if (conf.outputType === 'texto') {
+      // Só retorna o texto sem salvar
+      savedAs = { tipo: 'texto', preview: resp.content.slice(0, 200) };
+    }
+
+    res.json({
+      ok: true,
+      agente: codigo,
+      duracaoMs: duracao,
+      usage: resp.usage,
+      output: resp.content,
+      savedAs,
+    });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
   }
 }
