@@ -101,6 +101,26 @@ export async function acionarAgente(req, res) {
     }
   }
 
+  // Checa limite de gasto do mês (env CLAUDE_BUDGET_BRL, default 100)
+  const budgetBRL = parseFloat(process.env.CLAUDE_BUDGET_BRL || '100') || 100;
+  try {
+    await ensureLogTab();
+    const rows = await readSheet(LOG_TAB).catch(() => []);
+    const prefixoMes = new Date().toISOString().slice(0, 7);
+    const gastoMes = rows
+      .filter(r => String(r['Data'] || '').startsWith(prefixoMes))
+      .reduce((sum, r) => sum + (parseFloat(String(r['CustoBRL'] || '0').replace(',', '.')) || 0), 0);
+    if (gastoMes >= budgetBRL) {
+      return res.status(429).json({
+        error: `🚫 Limite mensal de R$ ${budgetBRL.toFixed(2)} atingido (gasto: R$ ${gastoMes.toFixed(2)}). Aumente CLAUDE_BUDGET_BRL no env do Render pra continuar.`,
+        budgetBRL, gastoMes,
+      });
+    }
+  } catch (e) {
+    // não bloqueia se falhar a checagem
+    console.error('[budget-check] erro:', e.message);
+  }
+
   // Monta o userMessage com os inputs preenchidos
   const userMessage = conf.inputs.map(f => {
     const val = inputs[f.name];
@@ -166,8 +186,15 @@ export async function acionarAgente(req, res) {
         para: 'mkt',
       });
     } else if (conf.outputType === 'texto') {
-      // Só retorna o texto sem salvar
+      // Só retorna o texto sem salvar — mas notifica também
       savedAs = { tipo: 'texto', preview: resp.content.slice(0, 200) };
+      await notify({
+        tipo: 'agente_executado',
+        titulo: `🤖 ${conf.nome} respondeu (texto)`,
+        detalhe: resp.content.slice(0, 150) + (resp.content.length > 150 ? '…' : ''),
+        url: '/#agentes',
+        para: 'mkt',
+      });
     }
 
     // Grava log do acionamento (não bloqueia resposta — best-effort)
@@ -250,6 +277,7 @@ export async function listAgentesLog(req, res) {
         countPorAgente[c] = (countPorAgente[c] || 0) + 1;
       });
 
+    const budgetBRL = parseFloat(process.env.CLAUDE_BUDGET_BRL || '100') || 100;
     res.json({
       items,
       total: items.length,
@@ -257,6 +285,8 @@ export async function listAgentesLog(req, res) {
         custoTotalMesBRL: Math.round(totalCustoMes * 100) / 100,
         acionamentosTotaisMes: totalAcionamentosMes,
         porAgente: countPorAgente,
+        budgetBRL,
+        pctBudget: budgetBRL > 0 ? Math.round((totalCustoMes / budgetBRL) * 100) : 0,
       },
     });
   } catch (e) {
