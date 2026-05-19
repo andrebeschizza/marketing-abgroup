@@ -2056,7 +2056,7 @@
         </div>
         <div class="agentes-stat">
           <span class="agentes-stat-label">Gasto Claude API (mês)</span>
-          <span class="agentes-stat-value">R$ ${stats.custoTotalMesBRL.toFixed(2).replace('.', ',')}</span>
+          <span class="agentes-stat-value">R$ ${stats.custoTotalMesBRL.toFixed(2).replace('.', ',')} <small style="font-size:11px;color:var(--ink-mute);font-weight:500;">/ R$ ${(stats.budgetBRL || 100).toFixed(2).replace('.', ',')}</small></span>
         </div>
         <div class="agentes-stat" style="flex:1;">
           <span class="agentes-stat-label">Agente mais usado</span>
@@ -2099,11 +2099,14 @@
     const items = r.items || [];
     const html = items.length === 0
       ? '<div style="color:var(--ink-mute);font-size:12px;">Sem acionamentos no mês.</div>'
-      : items.map(it => `
+      : items.map((it, idx) => `
         <div style="padding:10px 12px;border:1px solid var(--border);border-radius:6px;margin-bottom:8px;">
-          <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--ink-mute);">
+          <div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--ink-mute);">
             <span>${new Date(it.data).toLocaleString('pt-BR')}</span>
-            <span>${it.usuario} · R$ ${it.custoBRL.toFixed(2).replace('.', ',')} · ${it.inputTokens}+${it.outputTokens} tokens</span>
+            <span>
+              ${it.usuario} · R$ ${it.custoBRL.toFixed(2).replace('.', ',')} · ${it.inputTokens}+${it.outputTokens} tokens
+              <button class="agente-repetir-btn" data-codigo="${escapeHtml(it.codigo)}" data-inputs='${escapeHtml(JSON.stringify(it.inputs))}' style="margin-left:8px;background:var(--bg-card);border:1px solid var(--border);padding:2px 8px;border-radius:4px;font-size:10px;cursor:pointer;color:var(--ink-soft);">🔁 Repetir</button>
+            </span>
           </div>
           ${it.savedAs ? `<div style="font-size:11px;color:var(--accent-deep);margin-top:4px;">✓ ${escapeHtml(it.savedAs)}</div>` : ''}
           <details style="margin-top:6px;">
@@ -2130,6 +2133,29 @@
     logEl.innerHTML = html;
     logEl.style.display = 'block';
     overlay.classList.add('show');
+
+    // Listener pros botões Repetir dentro do log
+    logEl.querySelectorAll('.agente-repetir-btn').forEach(b => {
+      b.addEventListener('click', async (ev) => {
+        ev.stopPropagation();
+        const cod = b.dataset.codigo;
+        let inputs = {};
+        try { inputs = JSON.parse(b.dataset.inputs || '{}'); } catch {}
+        overlay.classList.remove('show');
+        if (logEl) logEl.style.display = 'none';
+        document.getElementById('modal-kpi-canvas').parentElement.style.display = 'block';
+        // Abre modal de acionar pré-preenchido
+        await abrirModalAcionar(cod);
+        // Aguarda DOM popular e preenche inputs
+        setTimeout(() => {
+          const form = document.getElementById('modal-agente-form');
+          Object.entries(inputs).forEach(([key, val]) => {
+            const el = form.querySelector(`[name="${key}"]`);
+            if (el) el.value = val;
+          });
+        }, 100);
+      });
+    });
     // Quando fechar, esconder logEl pra não vazar pra modal de KPI
     document.getElementById('modal-kpi-close').addEventListener('click', () => {
       if (logEl) logEl.style.display = 'none';
