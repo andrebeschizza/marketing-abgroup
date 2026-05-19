@@ -47,11 +47,14 @@ export async function listAgentes(req, res) {
     const agentes = fromSheet.length > 0 ? fromSheet : AGENTES_BASE;
     // Marca quais agentes têm botão "Acionar" disponível
     const acionaveis = listAgentesAcionaveis();
-    const acionaveisMap = Object.fromEntries(acionaveis.map(a => [a.codigo, a]));
     const enriched = agentes.map(a => {
-      // Tenta achar pelo código tipo "Ag. 7B" → "ag7b-..."
+      // Pega o prefixo do código (ex: "Ag. 7B" → "ag7b", "Ag. 13" → "ag13")
+      // e bate EXATAMENTE com o prefixo do agente acionável (antes do primeiro "-")
       const norm = String(a.codigo || '').toLowerCase().replace(/[\s\.]/g, '');
-      const match = acionaveis.find(ag => ag.codigo.replace(/-.*/, '').toLowerCase().includes(norm));
+      const match = acionaveis.find(ag => {
+        const acionavelPrefix = ag.codigo.split('-')[0]; // 'ag7b-roteirista-...' → 'ag7b'
+        return acionavelPrefix === norm;
+      });
       return { ...a, acionavel: match ? match.codigo : null };
     });
     res.json({ total: enriched.length, agentes: enriched });
