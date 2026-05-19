@@ -423,6 +423,28 @@
     }
     .agente-acionavel { border-color: var(--accent); border-width: 1.5px; }
     body.is-readonly .agente-btn-acionar { display: none !important; }
+    /* Stats agentes */
+    .agentes-stats-bar {
+      display: flex; gap: 14px; flex-wrap: wrap;
+      padding: 14px 16px; margin-bottom: 14px;
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--r-md);
+    }
+    .agentes-stat { display: flex; flex-direction: column; gap: 2px; }
+    .agentes-stat-label { font-size: 10px; color: var(--ink-mute); text-transform: uppercase; letter-spacing: 0.04em; font-weight: 600; }
+    .agentes-stat-value { font-size: 18px; font-weight: 700; color: var(--ink); }
+    .agente-exec-count {
+      display: inline-block; margin-top: 6px; padding: 2px 7px;
+      background: var(--bg-subtle); color: var(--ink-soft);
+      font-size: 10px; font-weight: 600; border-radius: 999px;
+    }
+    .agente-exec-count.has-runs { background: var(--accent-soft); color: var(--accent-deep); }
+    .agente-link-historico {
+      display: inline-block; margin-top: 4px;
+      font-size: 10px; color: var(--ink-mute); cursor: pointer;
+      text-decoration: underline;
+    }
+    .agente-link-historico:hover { color: var(--accent-deep); }
 
     /* ATALHOS */
     .atalhos-cat-title {
@@ -1291,6 +1313,7 @@
   <section class="panel" id="panel-agentes">
     <h1 class="page-title">Mapa do time</h1>
     <p class="page-sub">16 agentes do sistema. Saiba quem aciona o quê — sem precisar do Telegram.</p>
+    <div id="agentes-stats-bar"></div>
     <div id="agentes-grid" class="agentes-grid">
       <div class="loading">Carregando agentes…</div>
     </div>
@@ -2014,25 +2037,105 @@
 
   // ===== AGENTES =====
   async function loadAgentes() {
-    const data = await api('/api/agentes');
+    const [data, logData] = await Promise.all([
+      api('/api/agentes'),
+      api('/api/agentes/log?periodo=mes&limit=200'),
+    ]);
     const el = document.getElementById('agentes-grid');
     if (data.__error || !data.agentes) {
       el.innerHTML = '<div class="empty">Não foi possível carregar agentes.</div>';
       return;
     }
-    el.innerHTML = data.agentes.map(a => `
-      <div class="agente${a.acionavel ? ' agente-acionavel' : ''}">
-        <div class="agente-head">
-          <span class="agente-cod">${escapeHtml(a.codigo)}</span>
-          <span class="agente-cat">${escapeHtml(a.categoria || '')}</span>
+    // Stats bar no topo
+    const stats = logData.stats || { custoTotalMesBRL: 0, acionamentosTotaisMes: 0, porAgente: {} };
+    document.getElementById('agentes-stats-bar').innerHTML = `
+      <div class="agentes-stats-bar">
+        <div class="agentes-stat">
+          <span class="agentes-stat-label">Acionamentos este mês</span>
+          <span class="agentes-stat-value">${stats.acionamentosTotaisMes}</span>
         </div>
-        <div class="agente-nome">${escapeHtml(a.nome)}</div>
-        <div class="agente-funcao">${escapeHtml(a.funcao || '')}</div>
-        ${a.acionar ? `<div class="agente-acionar"><strong>Quando acionar:</strong> ${escapeHtml(a.acionar)}</div>` : ''}
-        ${a.acionavel ? `<button class="btn btn-secondary agente-btn-acionar readonly-hide" data-codigo="${escapeHtml(a.acionavel)}" type="button">🎯 Acionar agora</button>` : ''}
+        <div class="agentes-stat">
+          <span class="agentes-stat-label">Gasto Claude API (mês)</span>
+          <span class="agentes-stat-value">R$ ${stats.custoTotalMesBRL.toFixed(2).replace('.', ',')}</span>
+        </div>
+        <div class="agentes-stat" style="flex:1;">
+          <span class="agentes-stat-label">Agente mais usado</span>
+          <span class="agentes-stat-value" style="font-size:14px;">${(() => {
+            const top = Object.entries(stats.porAgente).sort((a,b) => b[1]-a[1])[0];
+            return top ? `${top[0]} (${top[1]}×)` : '—';
+          })()}</span>
+        </div>
       </div>
-    `).join('');
+    `;
+    el.innerHTML = data.agentes.map(a => {
+      const runs = a.acionavel ? (stats.porAgente[a.acionavel] || 0) : 0;
+      const runsBadge = a.acionavel
+        ? `<span class="agente-exec-count ${runs > 0 ? 'has-runs' : ''}">${runs} ${runs === 1 ? 'acionamento' : 'acionamentos'} no mês</span>${runs > 0 ? ` · <a class="agente-link-historico" data-codigo="${escapeHtml(a.acionavel)}">ver histórico</a>` : ''}`
+        : '';
+      return `
+        <div class="agente${a.acionavel ? ' agente-acionavel' : ''}">
+          <div class="agente-head">
+            <span class="agente-cod">${escapeHtml(a.codigo)}</span>
+            <span class="agente-cat">${escapeHtml(a.categoria || '')}</span>
+          </div>
+          <div class="agente-nome">${escapeHtml(a.nome)}</div>
+          <div class="agente-funcao">${escapeHtml(a.funcao || '')}</div>
+          ${a.acionar ? `<div class="agente-acionar"><strong>Quando acionar:</strong> ${escapeHtml(a.acionar)}</div>` : ''}
+          ${runsBadge}
+          ${a.acionavel ? `<button class="btn btn-secondary agente-btn-acionar readonly-hide" data-codigo="${escapeHtml(a.acionavel)}" type="button">🎯 Acionar agora</button>` : ''}
+        </div>
+      `;
+    }).join('');
   }
+
+  // Click "ver histórico" → abre modal de histórico do agente
+  document.getElementById('agentes-grid').addEventListener('click', async (e) => {
+    const link = e.target.closest('.agente-link-historico');
+    if (!link) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const codigo = link.dataset.codigo;
+    const r = await api(`/api/agentes/log?codigo=${encodeURIComponent(codigo)}&periodo=mes&limit=50`);
+    const items = r.items || [];
+    const html = items.length === 0
+      ? '<div style="color:var(--ink-mute);font-size:12px;">Sem acionamentos no mês.</div>'
+      : items.map(it => `
+        <div style="padding:10px 12px;border:1px solid var(--border);border-radius:6px;margin-bottom:8px;">
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--ink-mute);">
+            <span>${new Date(it.data).toLocaleString('pt-BR')}</span>
+            <span>${it.usuario} · R$ ${it.custoBRL.toFixed(2).replace('.', ',')} · ${it.inputTokens}+${it.outputTokens} tokens</span>
+          </div>
+          ${it.savedAs ? `<div style="font-size:11px;color:var(--accent-deep);margin-top:4px;">✓ ${escapeHtml(it.savedAs)}</div>` : ''}
+          <details style="margin-top:6px;">
+            <summary style="cursor:pointer;font-size:11px;color:var(--ink-soft);">Inputs e output</summary>
+            <div style="font-size:11px;color:var(--ink-soft);margin-top:6px;"><strong>Inputs:</strong> ${escapeHtml(JSON.stringify(it.inputs))}</div>
+            <pre style="font-size:11px;background:var(--bg-subtle);padding:8px;border-radius:4px;margin-top:6px;white-space:pre-wrap;max-height:200px;overflow:auto;">${escapeHtml(it.outputPreview)}${it.outputPreview.length >= 300 ? '…' : ''}</pre>
+          </details>
+        </div>
+      `).join('');
+    // Reusa o modal-kpi como container genérico
+    const overlay = document.getElementById('modal-kpi');
+    document.getElementById('modal-kpi-title').textContent = `📋 Histórico · ${codigo}`;
+    document.getElementById('modal-kpi-summary').innerHTML = `<div style="font-size:12px;color:var(--ink-soft);">${items.length} ${items.length === 1 ? 'acionamento' : 'acionamentos'} no mês corrente</div>`;
+    document.getElementById('modal-kpi-canvas').parentElement.style.display = 'none';
+    document.getElementById('modal-kpi-empty').style.display = 'none';
+    // Substitui canvas pelo HTML do histórico (gambi mas funciona)
+    let logEl = document.getElementById('modal-kpi-log-list');
+    if (!logEl) {
+      logEl = document.createElement('div');
+      logEl.id = 'modal-kpi-log-list';
+      logEl.style.cssText = 'max-height:500px;overflow-y:auto;margin-top:10px;';
+      document.getElementById('modal-kpi-canvas').parentElement.parentElement.appendChild(logEl);
+    }
+    logEl.innerHTML = html;
+    logEl.style.display = 'block';
+    overlay.classList.add('show');
+    // Quando fechar, esconder logEl pra não vazar pra modal de KPI
+    document.getElementById('modal-kpi-close').addEventListener('click', () => {
+      if (logEl) logEl.style.display = 'none';
+      document.getElementById('modal-kpi-canvas').parentElement.style.display = 'block';
+    }, { once: true });
+  });
 
   // ===== MODAL ACIONAR AGENTE =====
   let agenteAtual = null;
