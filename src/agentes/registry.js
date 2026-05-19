@@ -488,6 +488,148 @@ Como medir se essa conexão funcionou.`,
     parseOutput: () => null,
   },
 
+  // ===== AG.10 — AGENDADOR =====
+  // Não publica de fato (precisaria OAuth Meta/YouTube). Planeja agendamento ideal.
+  'ag10-agendador': {
+    nome: 'Ag.10 Agendador',
+    descricao: 'Planeja agendamento ótimo (horário, ordem, gancho) — vira demanda',
+    outputType: 'demanda',
+    inputs: [
+      { name: 'titulo_card', label: 'Título do vídeo / card a agendar', type: 'text', required: true, placeholder: 'Ex: BPC para autistas — Dra. Luana' },
+      {
+        name: 'plataformas', label: 'Plataformas alvo', type: 'select', required: true,
+        options: [
+          'TikTok + Kwai + Instagram + YouTube Shorts',
+          'Só Instagram (Reels)',
+          'Só TikTok',
+          'Só Kwai',
+          'Só YouTube (Shorts ou Longo)',
+          'YouTube Longo + LinkedIn',
+        ],
+      },
+      { name: 'data_alvo', label: 'Data alvo (YYYY-MM-DD)', type: 'text', required: true, placeholder: '2026-05-21' },
+      { name: 'contexto', label: 'Contexto adicional (sazonal, evento, lançamento?)', type: 'textarea', required: false },
+    ],
+    skill: `Você é o Ag.10 — Agendador de Conteúdo do AB Group. Planeja a publicação ótima de um vídeo em múltiplas plataformas.
+
+Princípios:
+- Público AB Group: classe C/D, 35-65 anos, brasileiros (maioria SP, MG, RJ, BA, GO)
+- Horários de pico: 7-9h (caminho trabalho), 12-13h (almoço), 18-21h (TV)
+- Cada plataforma tem janela ideal diferente
+- Sábado e domingo: tarde e noite
+
+Pra o vídeo fornecido, retorne em markdown:
+
+## Plano de publicação
+
+### Sequência de publicação
+1. **Plataforma X** · Horário · Por que esse horário · Gancho específico pra essa plataforma
+2. **Plataforma Y** · ...
+3. ...
+
+### Recomendação de gancho específico por plataforma
+- **TikTok**: [primeiros 3 segundos sugeridos]
+- **Instagram Reels**: [...]
+- **YouTube Shorts**: [...]
+- (etc por plataforma)
+
+### Hashtags por plataforma
+- TikTok: [5-7 mais virais]
+- Instagram: [8-12 mistas trending+nicho]
+- Kwai: [...]
+- YouTube Shorts: [...]
+
+### Calendário sugerido
+| Plataforma | Data | Horário | Status pós-publicação |
+|---|---|---|---|
+| ... | ... | ... | ... |
+
+### Pós-publicação (24h depois)
+3 ações concretas pra impulsionar (responder comentários, compartilhar, etc).
+
+### Risco/atenção
+1 coisa que pode dar errado e como prevenir.`,
+    parseOutput: (out, inp) => ({
+      tipo: 'Agendamento',
+      demanda: `[Agendar] ${inp.titulo_card.slice(0, 60)} · ${inp.data_alvo}`,
+      empresa: 'AB Group geral',
+      prioridade: 'Alto',
+      solicitante: 'Ag.10 Agendador',
+      briefing: out + (inp.contexto ? `\n\n---\nContexto: ${inp.contexto}` : ''),
+      prazo: inp.data_alvo || dataPlus(2),
+    }),
+  },
+
+  // ===== AG.11 — EDITOR DE CURTOS =====
+  // Não edita de fato (Whisper/FFmpeg fica num pipeline externo). Gera briefing pro editor humano.
+  'ag11-editor-curtos': {
+    nome: 'Ag.11 Editor de Curtos',
+    descricao: 'Gera briefing detalhado pro editor humano (cortes, legendas, b-roll)',
+    outputType: 'demanda',
+    inputs: [
+      { name: 'titulo', label: 'Título / tema do vídeo', type: 'text', required: true, placeholder: 'Ex: BPC negado pelo INSS' },
+      { name: 'duracao_alvo', label: 'Duração alvo', type: 'select', required: true, options: ['30 segundos', '45 segundos', '60 segundos', '90 segundos'] },
+      { name: 'link_drive_raw', label: 'Link Drive Raw (vídeo bruto)', type: 'text', required: false, placeholder: 'https://drive.google.com/...' },
+      { name: 'transcricao_ou_descricao', label: 'Transcrição ou descrição do vídeo bruto', type: 'textarea', required: true, placeholder: 'Cole a transcrição completa OU descreva o que tem no vídeo bruto (5-10 min de leitura)' },
+      {
+        name: 'apresentador', label: 'Apresentador', type: 'select', required: true, options: APRESENTADORES,
+      },
+    ],
+    skill: `Você é o Ag.11 — Editor de Vídeos Curtos do AB Group. Você não edita o vídeo — você prepara o BRIEFING DETALHADO pro editor humano executar.
+
+Pra o vídeo descrito/transcrito fornecido, retorne em markdown:
+
+## Briefing de edição
+
+### Resumo executivo
+1 parágrafo do que esse vídeo final precisa transmitir.
+
+### Cortes sugeridos (timeline)
+| # | De | Até | O que acontece | Por que cortar |
+|---|---|---|---|---|
+| 1 | 00:00 | 00:03 | [...] | Hook forte |
+| 2 | ... | ... | ... | ... |
+
+### Legendas
+- Estilo: bold, fonte sans-serif (sugerir SF Pro / Inter / Montserrat)
+- Cor: amarelo no destaque, branco no normal
+- Tamanho: 60-80% da altura da fonte default
+- Posição: meio inferior (não cobrir rosto)
+- Palavras destacadas em cada bloco: [lista]
+
+### B-roll / Inserts sugeridos
+Lista de imagens/videos auxiliares pra cortar entre falas:
+- Tipo de imagem · Onde inserir (timestamp)
+
+### Sound design
+- Música de fundo (estilo, BPM, volume)
+- Efeitos sonoros (whoosh, click, etc) em pontos específicos
+
+### Format e exportação
+- Aspect ratio: 9:16
+- Resolução: 1080×1920
+- Frame rate: 30fps
+- Codec: H.264, AAC audio
+- Bitrate: 8-12 Mbps
+
+### Checklist final (review)
+- [ ] Hook nos primeiros 3 segundos
+- [ ] Legendas em 100% das falas
+- [ ] CTA visual + falado no fim
+- [ ] Watermark @andrebeschizza
+- [ ] (etc)`,
+    maxTokens: 4000,
+    parseOutput: (out, inp) => ({
+      tipo: 'Edição',
+      demanda: `[Editar curto] ${inp.titulo.slice(0, 60)} (${inp.duracao_alvo})`,
+      empresa: 'AB Group geral',
+      prioridade: 'Alto',
+      solicitante: 'Ag.11 Editor de Curtos',
+      briefing: out + (inp.link_drive_raw ? `\n\n---\nDrive Raw: ${inp.link_drive_raw}\nApresentador: ${inp.apresentador}` : `\n\nApresentador: ${inp.apresentador}`),
+      prazo: dataPlus(2),
+    }),
+  },
+
   // ===== AG.12 — EDITOR DE LONGOS =====
   'ag12-editor-longos': {
     nome: 'Ag.12 Editor de Vídeos Longos',
