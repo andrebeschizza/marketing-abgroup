@@ -1,8 +1,27 @@
-// /api/agentes — Mapa dos 16 agentes + acionamento via Claude API
-import { readSheet, appendRow } from '../lib/sheets.js';
+// /api/agentes — Mapa dos 16 agentes + acionamento via Claude API + log
+import { readSheet, appendRow, listTabs, createTab } from '../lib/sheets.js';
 import { askClaude } from '../lib/claude.js';
 import { AGENTES, listAgentesAcionaveis } from '../agentes/registry.js';
 import { notify } from './notificacoes.js';
+
+const LOG_TAB = 'agentes_log';
+const LOG_HEADERS = ['Data', 'Agente', 'Codigo', 'Usuario', 'Inputs', 'Output', 'InputTokens', 'OutputTokens', 'CustoBRL', 'SavedAs'];
+
+async function ensureLogTab() {
+  const tabs = await listTabs().catch(() => []);
+  if (!tabs.includes(LOG_TAB)) {
+    await createTab(LOG_TAB, LOG_HEADERS);
+  }
+}
+
+// Custo estimado em R$ baseado em modelo Sonnet 4.6 (USD→BRL ≈ 5.0)
+// Sonnet pricing: $3/M input, $15/M output (out/2025)
+function estimarCustoBRL(usage) {
+  if (!usage) return 0;
+  const inputUSD = (usage.input_tokens || 0) * 3 / 1_000_000;
+  const outputUSD = (usage.output_tokens || 0) * 15 / 1_000_000;
+  return Math.round((inputUSD + outputUSD) * 5.0 * 100) / 100; // R$ com 2 casas
+}
 
 // Fallback se aba "agentes" não existir ou estiver vazia
 const AGENTES_BASE = [
@@ -151,13 +170,94 @@ export async function acionarAgente(req, res) {
       savedAs = { tipo: 'texto', preview: resp.content.slice(0, 200) };
     }
 
+    // Grava log do acionamento (não bloqueia resposta — best-effort)
+    const custoBRL = estimarCustoBRL(resp.usage);
+    ensureLogTab()
+      .then(() => appendRow(LOG_TAB, {
+        'Data': new Date().toISOString(),
+        'Agente': conf.nome,
+        'Codigo': codigo,
+        'Usuario': req.session?.perfil || 'mkt',
+        'Inputs': JSON.stringify(inputs).slice(0, 500),
+        'Output': (resp.content || '').slice(0, 2000), // trunca pra não inchar sheet
+        'InputTokens': resp.usage?.input_tokens || 0,
+        'OutputTokens': resp.usage?.output_tokens || 0,
+        'CustoBRL': custoBRL,
+        'SavedAs': savedAs ? `${savedAs.tipo}: ${savedAs.titulo || savedAs.preview || ''}` : '',
+      }))
+      .catch(e => console.error('[agentes-log] falha gravar:', e.message));
+
     res.json({
       ok: true,
       agente: codigo,
       duracaoMs: duracao,
       usage: resp.usage,
+      custoBRL,
       output: resp.content,
       savedAs,
+    });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+}
+
+// GET /api/agentes/log — lista últimos N acionamentos (com filtros)
+// Query: ?codigo=ag7b-... (filtra por agente)  ?limit=20  ?periodo=mes|hoje|tudo
+export async function listAgentesLog(req, res) {
+  try {
+    await ensureLogTab();
+    const rows = await readSheet(LOG_TAB);
+    const { codigo, periodo = 'mes', limit = 50 } = req.query;
+    const hoje = new Date();
+    const prefixoHoje = hoje.toISOString().slice(0, 10);
+    const prefixoMes = prefixoHoje.slice(0, 7);
+    let items = rows
+      .filter(r => r['Data'])
+      .filter(r => !codigo || r['Codigo'] === codigo)
+      .filter(r => {
+        const data = String(r['Data'] || '');
+        if (periodo === 'hoje') return data.startsWith(prefixoHoje);
+        if (periodo === 'mes') return data.startsWith(prefixoMes);
+        return true;
+      })
+      .map(r => ({
+        data: r['Data'] || '',
+        agente: r['Agente'] || '',
+        codigo: r['Codigo'] || '',
+        usuario: r['Usuario'] || '',
+        inputs: (() => { try { return JSON.parse(r['Inputs'] || '{}'); } catch { return r['Inputs']; } })(),
+        outputPreview: String(r['Output'] || '').slice(0, 300),
+        inputTokens: parseInt(r['InputTokens'], 10) || 0,
+        outputTokens: parseInt(r['OutputTokens'], 10) || 0,
+        custoBRL: parseFloat(String(r['CustoBRL'] || '0').replace(',', '.')) || 0,
+        savedAs: r['SavedAs'] || '',
+      }))
+      .sort((a, b) => (b.data || '').localeCompare(a.data || ''))
+      .slice(0, parseInt(limit, 10));
+
+    // Estatísticas agregadas
+    const totalCustoMes = rows
+      .filter(r => String(r['Data'] || '').startsWith(prefixoMes))
+      .reduce((sum, r) => sum + (parseFloat(String(r['CustoBRL'] || '0').replace(',', '.')) || 0), 0);
+    const totalAcionamentosMes = rows
+      .filter(r => String(r['Data'] || '').startsWith(prefixoMes))
+      .length;
+    const countPorAgente = {};
+    rows
+      .filter(r => String(r['Data'] || '').startsWith(prefixoMes))
+      .forEach(r => {
+        const c = r['Codigo'] || 'desconhecido';
+        countPorAgente[c] = (countPorAgente[c] || 0) + 1;
+      });
+
+    res.json({
+      items,
+      total: items.length,
+      stats: {
+        custoTotalMesBRL: Math.round(totalCustoMes * 100) / 100,
+        acionamentosTotaisMes: totalAcionamentosMes,
+        porAgente: countPorAgente,
+      },
     });
   } catch (e) {
     res.status(500).json({ error: e.message });
