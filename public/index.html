@@ -31,6 +31,26 @@
       --r-md: 10px;
       --r-lg: 14px;
     }
+    /* ===== DARK MODE — Sprint 27 ===== */
+    [data-theme="dark"] {
+      color-scheme: dark;
+      --bg: #0F0F0E;
+      --bg-card: #1A1A19;
+      --bg-subtle: #242422;
+      --border: #2E2E2B;
+      --border-strong: #3D3D3A;
+      --ink: #F2F2F0;
+      --ink-2: #D4D4D0;
+      --ink-soft: #A8A8A2;
+      --ink-mute: #6E6E68;
+      --accent: #2DB49E;
+      --accent-soft: #14322C;
+      --accent-deep: #5FD4BE;
+      --warning: #E0922E;
+      --warning-soft: #3A2E10;
+      --danger: #E5484D;
+      --danger-soft: #3A1A1A;
+    }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     html { font-size: 14px; -webkit-text-size-adjust: 100%; }
     body {
@@ -1061,6 +1081,16 @@
       font-weight: 600;
     }
 
+    /* Toggle de tema */
+    .theme-toggle {
+      width: 30px; height: 30px;
+      border: 1px solid var(--border); border-radius: 50%;
+      background: transparent; font-size: 14px;
+      display: inline-flex; align-items: center; justify-content: center;
+      transition: background 0.12s;
+    }
+    .theme-toggle:hover { background: var(--bg-subtle); }
+
     /* ===== MOBILE POLISH (≤600px) — Sprint 25 ===== */
     @media (max-width: 600px) {
       .topbar-inner { padding: 10px 14px; flex-wrap: wrap; gap: 8px; }
@@ -1136,6 +1166,7 @@
         </div>
       </span>
       <span><span class="dot"></span><span id="status-label">Online</span></span>
+      <button class="theme-toggle" id="btn-theme" title="Alternar tema claro/escuro" aria-label="Alternar tema">🌙</button>
       <button class="logout" id="btn-logout">Sair</button>
     </div>
   </div>
@@ -1653,6 +1684,32 @@
   document.getElementById('btn-logout').addEventListener('click', async () => {
     await fetch('/logout', { method: 'POST' });
     window.location.href = '/login';
+  });
+
+  // ===== DARK MODE (Sprint 27) =====
+  (function initTheme() {
+    let saved = null;
+    try { saved = localStorage.getItem('ab-theme'); } catch {}
+    // 1ª visita: respeita preferência do sistema
+    if (!saved) {
+      saved = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+    }
+    applyTheme(saved);
+  })();
+  function applyTheme(theme) {
+    if (theme === 'dark') {
+      document.documentElement.setAttribute('data-theme', 'dark');
+      document.getElementById('btn-theme').textContent = '☀️';
+    } else {
+      document.documentElement.removeAttribute('data-theme');
+      document.getElementById('btn-theme').textContent = '🌙';
+    }
+  }
+  document.getElementById('btn-theme').addEventListener('click', () => {
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const novo = isDark ? 'light' : 'dark';
+    applyTheme(novo);
+    try { localStorage.setItem('ab-theme', novo); } catch {}
   });
 
   // ===== KPIs =====
