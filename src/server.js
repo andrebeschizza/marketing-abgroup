@@ -18,6 +18,7 @@ import { listNotificacoes, createNotificacao, marcarLida, marcarTodasLidas } fro
 import { runAlertsHandler, runAlerts } from './jobs/alerts.js';
 import { syncAdvboxHandler, syncAdvbox } from './jobs/advbox-sync.js';
 import { runAutoCalcHandler, runAutoCalc } from './jobs/auto-calc.js';
+import { dispararResumoHandler, dispararResumoSemanal, ehHorarioResumo } from './jobs/resumo-semanal.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -122,6 +123,7 @@ app.patch('/api/kpis/:indicador', requireAdmin, updateKpi);
 app.post('/api/admin/seed-kpis', requireAdmin, seedKpis);
 app.post('/api/admin/snapshot-kpis', requireAdmin, snapshotKpis);
 app.post('/api/admin/run-alerts', requireAdmin, runAlertsHandler);
+app.post('/api/admin/resumo-semanal', requireAdmin, dispararResumoHandler);
 app.post('/api/admin/sync-advbox', requireAdmin, syncAdvboxHandler);
 app.post('/api/admin/auto-calc', requireAdmin, runAutoCalcHandler);
 app.get('/api/admin/meta-healthcheck', requireAdmin, async (req, res) => {
@@ -258,6 +260,18 @@ app.listen(PORT, () => {
   };
   setTimeout(runAlertsCron, 90 * 1000);
   setInterval(runAlertsCron, 24 * 60 * 60 * 1000);
+
+  // Cron interno: resumo semanal — checa a cada 1h se é sexta 17h (Brasília)
+  const runResumoCron = async () => {
+    if (!ehHorarioResumo()) return;
+    try {
+      const out = await dispararResumoSemanal();
+      console.log(`[cron] resumo-semanal @ ${new Date().toISOString()} ·`, out);
+    } catch (e) {
+      console.error('[cron] resumo-semanal failed:', e.message);
+    }
+  };
+  setInterval(runResumoCron, 60 * 60 * 1000); // a cada 1h
 
   // Cron interno: sync ADVBOX 1x a cada 4h (KPIs Leads/Qualificados/Atendidos/Contratos),
   // SEGUIDO de auto-calc (Vídeos publicados + Conversão).
