@@ -797,7 +797,7 @@
     .btn-link:hover { background: var(--bg-subtle); color: var(--ink-soft); }
     #btn-sync-all { padding: 6px 14px; font-size: 12px; }
     #btn-sync-all.loading { opacity: 0.6; cursor: wait; }
-    body.is-readonly .dashboard-sync-row { display: none !important; }
+    .dashboard-sync-row .btn { padding: 6px 14px; font-size: 12px; }
 
     /* BANNER INTELIGENTE DASHBOARD */
     .smart-banner {
@@ -1106,11 +1106,12 @@
     <h1 class="page-title" id="greeting">Bom dia, time.</h1>
     <p class="page-sub">Cockpit central do marketing AB Group. Cada métrica reflete a saúde do funil este mês.</p>
 
-    <div class="dashboard-sync-row readonly-hide">
-      <button class="btn btn-secondary" id="btn-sync-all" type="button">🔄 Sincronizar agora</button>
+    <div class="dashboard-sync-row">
+      <button class="btn btn-secondary readonly-hide" id="btn-sync-all" type="button">🔄 Sincronizar agora</button>
+      <a class="btn btn-secondary" href="/relatorio.html" style="text-decoration:none;">📄 Relatório executivo</a>
       <span class="dashboard-last-update" id="dashboard-last-update"></span>
       <span class="dashboard-sync-status" id="dashboard-sync-status"></span>
-      <button class="btn-link" id="btn-reset-yt" type="button" title="Apaga snapshots do mês — útil pra recalibrar contagem de inscritos">↻ reset baseline YT</button>
+      <button class="btn-link readonly-hide" id="btn-reset-yt" type="button" title="Apaga snapshots do mês — útil pra recalibrar contagem de inscritos">↻ reset baseline YT</button>
     </div>
     <div id="dashboard-banner-inteligente"></div>
     <div id="dashboard-banner-publica"></div>
