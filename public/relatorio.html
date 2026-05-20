@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Relatório Executivo · Marketing AB Group</title>
+  <style>
+    :root {
+      --bg: #FFFFFF; --ink: #0A0A0A; --ink-soft: #525252; --ink-mute: #8B8B85;
+      --border: #EAEAE5; --accent: #1B9C85; --accent-deep: #0F7A66; --accent-soft: #E6F4F0;
+      --warning: #B45309; --danger: #B91C1C;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #F5F5F2; color: var(--ink);
+      font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif;
+      font-size: 14px; line-height: 1.5;
+    }
+    .toolbar {
+      position: sticky; top: 0; z-index: 10;
+      background: var(--ink); color: white;
+      padding: 12px 20px;
+      display: flex; gap: 10px; align-items: center; justify-content: space-between;
+    }
+    .toolbar-title { font-weight: 600; font-size: 14px; }
+    .toolbar-actions { display: flex; gap: 8px; }
+    .btn {
+      padding: 8px 16px; border-radius: 6px; font-size: 13px; font-weight: 600;
+      border: 1px solid rgba(255,255,255,0.25); background: transparent; color: white;
+      cursor: pointer;
+    }
+    .btn-primary { background: var(--accent); border-color: var(--accent); }
+    .btn:hover { opacity: 0.9; }
+
+    .page {
+      max-width: 820px; margin: 24px auto; padding: 48px;
+      background: white; border-radius: 8px;
+      box-shadow: 0 2px 16px rgba(0,0,0,0.06);
+    }
+    .rpt-header { border-bottom: 2px solid var(--ink); padding-bottom: 16px; margin-bottom: 28px; }
+    .rpt-brand { font-size: 12px; font-weight: 700; letter-spacing: 0.08em; color: var(--accent-deep); text-transform: uppercase; }
+    .rpt-title { font-size: 26px; font-weight: 800; letter-spacing: -0.02em; margin: 6px 0; }
+    .rpt-meta { font-size: 13px; color: var(--ink-mute); }
+
+    h2.section {
+      font-size: 15px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+      color: var(--ink); margin: 28px 0 12px; padding-bottom: 6px;
+      border-bottom: 1px solid var(--border);
+    }
+    .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+    .kpi-box {
+      border: 1px solid var(--border); border-radius: 8px; padding: 12px;
+      border-left: 3px solid var(--ink-mute);
+    }
+    .kpi-box.verde { border-left-color: var(--accent); }
+    .kpi-box.amarelo { border-left-color: var(--warning); }
+    .kpi-box.critico { border-left-color: var(--danger); }
+    .kpi-box-label { font-size: 10px; color: var(--ink-soft); font-weight: 600; }
+    .kpi-box-value { font-size: 20px; font-weight: 800; letter-spacing: -0.02em; margin-top: 2px; }
+    .kpi-box-meta { font-size: 10px; color: var(--ink-mute); margin-top: 2px; }
+
+    table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 8px; }
+    th { text-align: left; padding: 7px 8px; background: #F5F5F2; font-weight: 700; font-size: 10px; text-transform: uppercase; letter-spacing: 0.03em; color: var(--ink-soft); }
+    td { padding: 7px 8px; border-bottom: 1px solid var(--border); }
+    .empty-line { color: var(--ink-mute); font-style: italic; font-size: 12px; padding: 10px 0; }
+
+    .resumo-box {
+      background: var(--accent-soft); border: 1px solid rgba(27,156,133,0.2);
+      border-radius: 8px; padding: 14px 16px; margin: 8px 0;
+      font-size: 13px; line-height: 1.55;
+    }
+    .rpt-footer {
+      margin-top: 36px; padding-top: 14px; border-top: 1px solid var(--border);
+      font-size: 11px; color: var(--ink-mute); text-align: center;
+    }
+    .loading-msg { padding: 40px; text-align: center; color: var(--ink-mute); }
+
+    @media print {
+      body { background: white; }
+      .toolbar { display: none; }
+      .page { margin: 0; box-shadow: none; border-radius: 0; max-width: 100%; padding: 24px; }
+      h2.section { page-break-after: avoid; }
+      table { page-break-inside: auto; }
+      tr { page-break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    <span class="toolbar-title">📄 Relatório Executivo</span>
+    <div class="toolbar-actions">
+      <button class="btn" onclick="window.location.href='/'">← Voltar ao app</button>
+      <button class="btn" id="btn-copiar">Copiar como texto</button>
+      <button class="btn btn-primary" onclick="window.print()">🖨 Imprimir / PDF</button>
+    </div>
+  </div>
+
+  <div class="page" id="page">
+    <div class="loading-msg">Carregando dados…</div>
+  </div>
+
+  <script>
+    const MES_NOMES = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+    function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+    function fmtNum(n) {
+      if (n == null || isNaN(n)) return '—';
+      if (n >= 1000) return Number(n).toLocaleString('pt-BR');
+      if (Number.isInteger(n)) return String(n);
+      return Number(n).toFixed(1).replace('.', ',');
+    }
+    async function api(path) {
+      try {
+        const r = await fetch(path);
+        if (r.status === 401) { window.location.href = '/login'; return null; }
+        return await r.json();
+      } catch (e) { return { __error: e.message }; }
+    }
+
+    (async function build() {
+      const hoje = new Date();
+      const [me, kpisData, calData, logData, alertasData] = await Promise.all([
+        api('/api/me'), api('/api/kpis'), api('/api/calendario'),
+        api('/api/agentes/log?periodo=mes&limit=200'), api('/api/alertas'),
+      ]);
+      if (!kpisData) return; // redirecionou
+
+      const kpis = (kpisData && kpisData.kpis) || [];
+      const cards = (calData && calData.items) || [];
+      const logStats = (logData && logData.stats) || {};
+      const alertas = (alertasData && alertasData.alertas) || [];
+
+      // Cards publicados no mês corrente
+      const publicadosMes = cards.filter(c => {
+        if (c.status !== 'Publicado') return false;
+        const d = String(c.dataPublicacao || '').slice(0, 7);
+        return d === hoje.toISOString().slice(0, 7);
+      });
+      // Cards em produção (não publicados)
+      const emProducao = cards.filter(c => c.status && c.status !== 'Publicado');
+
+      // KPIs do funil comercial
+      const funil = ['Leads', 'Qualificados', 'Atendidos pela equipe', 'Contratos']
+        .map(n => kpis.find(k => k.indicador === n)).filter(Boolean);
+
+      let html = `
+        <div class="rpt-header">
+          <div class="rpt-brand">Marketing AB Group</div>
+          <div class="rpt-title">Relatório Executivo</div>
+          <div class="rpt-meta">${hoje.getDate()} de ${MES_NOMES[hoje.getMonth()]} de ${hoje.getFullYear()} · gerado ${hoje.toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'})}${me && me.perfilLabel ? ' · perfil: ' + esc(me.perfilLabel) : ''}</div>
+        </div>
+
+        <h2 class="section">Funil comercial — ${MES_NOMES[hoje.getMonth()]}</h2>
+        <div class="kpi-grid">
+          ${funil.map(k => `
+            <div class="kpi-box ${esc(k.status)}">
+              <div class="kpi-box-label">${esc(k.indicador)}</div>
+              <div class="kpi-box-value">${fmtNum(k.realizado)}</div>
+              <div class="kpi-box-meta">Meta ${fmtNum(k.meta)} · ${k.pct}%</div>
+            </div>
+          `).join('')}
+        </div>
+
+        <h2 class="section">Todos os indicadores</h2>
+        <table>
+          <thead><tr><th>Indicador</th><th>Realizado</th><th>Meta</th><th>%</th><th>Fonte</th></tr></thead>
+          <tbody>
+            ${kpis.map(k => `
+              <tr>
+                <td>${esc(k.indicador)}</td>
+                <td><strong>${fmtNum(k.realizado)}</strong> ${esc(k.unidade||'')}</td>
+                <td>${fmtNum(k.meta)}</td>
+                <td>${k.pct}%</td>
+                <td>${k.fonte ? '🔒 ' + esc(k.fonte) : 'manual'}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+
+        <h2 class="section">Conteúdo — Calendário Editorial</h2>
+        <div class="resumo-box">
+          <strong>${publicadosMes.length}</strong> vídeo(s) publicado(s) este mês ·
+          <strong>${emProducao.length}</strong> em produção no pipeline.
+        </div>
+        ${publicadosMes.length > 0 ? `
+        <table>
+          <thead><tr><th>Título</th><th>Marca</th><th>Apresentador</th><th>Data publicação</th></tr></thead>
+          <tbody>
+            ${publicadosMes.map(c => `
+              <tr>
+                <td>${esc(c.titulo)}</td>
+                <td>${esc(c.marca||'')}</td>
+                <td>${esc(c.apresentador||'')}</td>
+                <td>${esc((c.dataPublicacao||'').slice(0,10))}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>` : '<div class="empty-line">Nenhum vídeo publicado neste mês ainda.</div>'}
+
+        <h2 class="section">Agentes acionados — ${MES_NOMES[hoje.getMonth()]}</h2>
+        <div class="resumo-box">
+          <strong>${logStats.acionamentosTotaisMes || 0}</strong> acionamento(s) ·
+          Custo Claude API: <strong>R$ ${(logStats.custoTotalMesBRL||0).toFixed(2).replace('.',',')}</strong>
+          ${logStats.budgetBRL ? ` de R$ ${Number(logStats.budgetBRL).toFixed(2).replace('.',',')} (orçamento)` : ''}
+        </div>
+        ${logStats.porAgente && Object.keys(logStats.porAgente).length > 0 ? `
+        <table>
+          <thead><tr><th>Agente</th><th>Acionamentos</th></tr></thead>
+          <tbody>
+            ${Object.entries(logStats.porAgente).sort((a,b)=>b[1]-a[1]).map(([cod,n])=>`
+              <tr><td>${esc(cod)}</td><td>${n}×</td></tr>
+            `).join('')}
+          </tbody>
+        </table>` : '<div class="empty-line">Nenhum agente acionado neste mês.</div>'}
+
+        <h2 class="section">Alertas críticos</h2>
+        ${alertas.length > 0 ? `
+        <table>
+          <thead><tr><th>Título</th><th>Severidade</th></tr></thead>
+          <tbody>
+            ${alertas.slice(0,10).map(a => `
+              <tr><td>${esc(a.titulo)}</td><td>${esc(a.severidade||'')}</td></tr>
+            `).join('')}
+          </tbody>
+        </table>` : '<div class="empty-line">Nenhum alerta ativo. Tudo no verde.</div>'}
+
+        <div class="rpt-footer">
+          Marketing AB Group · marketing-abgroup.onrender.com · documento gerado automaticamente
+        </div>
+      `;
+      document.getElementById('page').innerHTML = html;
+    })();
+
+    // Copiar como texto plano
+    document.getElementById('btn-copiar').addEventListener('click', () => {
+      const texto = document.getElementById('page').innerText;
+      navigator.clipboard.writeText(texto)
+        .then(() => alert('✓ Relatório copiado! Cola onde quiser (e-mail, WhatsApp, Slack).'))
+        .catch(() => alert('Não foi possível copiar automaticamente. Selecione o texto manualmente.'));
+    });
+  </script>
+</body>
+</html>
