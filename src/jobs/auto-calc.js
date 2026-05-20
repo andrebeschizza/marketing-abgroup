@@ -8,6 +8,7 @@ import { readSheet, updateRange, appendRow, listTabs, createTab } from '../lib/s
 import { countPostsBlogDoMes } from '../lib/blog-rss.js';
 import { inscritosGanhosDoMes, getSubscriberCount } from '../lib/youtube.js';
 import { spendDoMesAtual } from '../lib/meta-ads.js';
+import { countLeadsUltimosDias } from '../lib/advbox.js';
 
 // Snapshot do total ATUAL de inscritos no YouTube (gravado na aba kpis_historico).
 // Permite calcular GANHO mensal: total_atual - menor_snapshot_do_mes.
@@ -69,12 +70,20 @@ function readRealizado(rows, indicador) {
   return isNaN(n) ? 0 : n;
 }
 
-// Calcula conversão Lead→Contrato como % inteiro
-function calcConversao(rows) {
-  const leads = readRealizado(rows, 'Leads');
+// Calcula conversão Lead→Contrato por JANELA de 60 dias.
+// Contratos fechados no mês ÷ Leads que entraram nos últimos 60 dias.
+// Janela maior no denominador reflete o ciclo real de venda (lead leva ~45-60d pra fechar),
+// evitando estouro absurdo (ex: 343% da meta) que acontece com Leads-do-mês.
+async function calcConversao(rows) {
   const contratos = readRealizado(rows, 'Contratos');
-  if (!leads || leads === 0) return 0;
-  return Math.round((contratos / leads) * 100);
+  let leadsJanela = 0;
+  if (process.env.ADVBOX_TOKEN) {
+    leadsJanela = await countLeadsUltimosDias(60).catch(() => 0);
+  }
+  // Fallback: se não tem ADVBOX, usa Leads do mês do Sheet
+  if (!leadsJanela) leadsJanela = readRealizado(rows, 'Leads');
+  if (!leadsJanela || leadsJanela === 0) return 0;
+  return Math.round((contratos / leadsJanela) * 100);
 }
 
 export async function runAutoCalc() {
@@ -101,7 +110,7 @@ export async function runAutoCalc() {
 
   const calculos = [
     { indicador: 'Vídeos publicados', valor: await calcVideosPublicados() },
-    { indicador: 'Conversão Lead→Contrato', valor: calcConversao(rows) },
+    { indicador: 'Conversão Lead→Contrato', valor: await calcConversao(rows) },
   ];
   if (noticias !== null) {
     calculos.push({ indicador: 'Notícias publicadas no blog', valor: noticias });
