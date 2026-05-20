@@ -1060,6 +1060,56 @@
       border-color: var(--accent);
       font-weight: 600;
     }
+
+    /* ===== MOBILE POLISH (≤600px) — Sprint 25 ===== */
+    @media (max-width: 600px) {
+      .topbar-inner { padding: 10px 14px; flex-wrap: wrap; gap: 8px; }
+      .brand-text small { display: none; }
+      .topbar-meta { gap: 6px; }
+      .container { padding: 16px 14px 48px; }
+      .page-title { font-size: 20px; }
+      .page-sub { font-size: 13px; margin-bottom: 16px; }
+      /* KPIs: 2 colunas no celular */
+      .kpis { grid-template-columns: repeat(2, 1fr) !important; gap: 8px; }
+      .kpi { padding: 12px 14px; }
+      .kpi-value { font-size: 20px !important; }
+      /* Banner inteligente empilhado */
+      .smart-banner { padding: 14px 16px; }
+      .smart-banner-msg { font-size: 14px; }
+      .smart-banner-stats { gap: 12px; }
+      /* Linha de sync vira coluna */
+      .dashboard-sync-row { flex-wrap: wrap; gap: 8px; }
+      .dashboard-sync-row .btn { flex: 1; min-width: 130px; text-align: center; }
+      .btn-link { margin-left: 0; }
+      /* Cards e formulários */
+      .card { padding: 14px 16px; }
+      .field-group { grid-template-columns: 1fr; }
+      .modal-body .field-group { grid-template-columns: 1fr; }
+      .form-grid { gap: 10px; }
+      /* Kanban: 1 coluna, scroll vertical */
+      .kanban { grid-template-columns: 1fr !important; }
+      /* Calendário mensal: células menores */
+      .cal-filters { gap: 6px; }
+      .cal-filters .select { min-width: 0; flex: 1; }
+      .cal-view-toggle { flex-wrap: wrap; }
+      .cal-month-nav { margin-left: 0; width: 100%; justify-content: center; margin-top: 8px; }
+      /* Modais ocupam quase tela toda */
+      .modal { max-width: 100% !important; margin: 0; border-radius: var(--r-md) var(--r-md) 0 0; }
+      .modal-overlay { padding: 0; align-items: flex-end; }
+      .modal-body { padding: 14px 16px; }
+      /* Agentes: 1 coluna */
+      .agentes-grid { grid-template-columns: 1fr !important; }
+      .agentes-stats-bar { flex-direction: column; gap: 8px; }
+      /* Tabelas com scroll horizontal */
+      .demanda-row { flex-wrap: wrap; }
+      /* Notificações dropdown ocupa largura */
+      .notif-dropdown { width: 92vw !important; right: -8px !important; }
+    }
+    /* Telas muito pequenas (≤380px) */
+    @media (max-width: 380px) {
+      .kpis { grid-template-columns: 1fr !important; }
+      .tab { padding: 10px 10px; font-size: 12px; }
+    }
   </style>
 </head>
 <body>
