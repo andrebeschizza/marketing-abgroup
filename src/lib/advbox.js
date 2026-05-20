@@ -52,6 +52,19 @@ export async function countLeadsDoMes({ start, end } = mesAtual()) {
   return r.totalCount || 0;
 }
 
+// Conta leads (customers) criados nos últimos N dias — usado pra conversão por janela
+export async function countLeadsUltimosDias(dias = 60) {
+  const hoje = new Date();
+  const inicio = new Date(hoje.getTime() - dias * 24 * 60 * 60 * 1000);
+  const fmt = (d) => d.toISOString().slice(0, 10);
+  const r = await advboxGet('/customers', {
+    created_start: fmt(inicio),
+    created_end: fmt(hoje),
+    limit: 1,
+  });
+  return r.totalCount || 0;
+}
+
 // ===== KPI 2: QUALIFICADOS — task ANÁLISE DE CASO (3346695) =====
 // Observação: usando created (SDR criou a análise). Se for completed, ajustar pra completed_start/end.
 const TASK_ID_ANALISE_CASO = 3346695;
