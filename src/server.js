@@ -19,6 +19,7 @@ import { runAlertsHandler, runAlerts } from './jobs/alerts.js';
 import { syncAdvboxHandler, syncAdvbox } from './jobs/advbox-sync.js';
 import { runAutoCalcHandler, runAutoCalc } from './jobs/auto-calc.js';
 import { dispararResumoHandler, dispararResumoSemanal, ehHorarioResumo } from './jobs/resumo-semanal.js';
+import { webhookAtendeDireito, webhookAtendeStatus } from './api/webhook-atende.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -111,6 +112,11 @@ app.get('/api/me', (req, res) => {
 app.get('/login', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'login.html'));
 });
+
+// ===== WEBHOOK PÚBLICO (Atende Direito → Leads) =====
+// Registrado ANTES do requireAuth: o n8n não tem sessão, autentica por token.
+app.post('/api/webhook/atende-direito', webhookAtendeDireito);
+app.get('/api/webhook/atende-direito', webhookAtendeStatus);
 
 // ===== ROTAS PROTEGIDAS =====
 app.use('/api', requireAuth);
