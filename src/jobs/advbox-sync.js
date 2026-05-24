@@ -5,8 +5,9 @@ import { readSheet, updateRange } from '../lib/sheets.js';
 import { snapshotKpisAdvbox } from '../lib/advbox.js';
 
 // Map: nome exato do indicador na aba kpis → chave do snapshot ADVBOX
+// "Leads" NÃO está aqui de propósito: o ADVBOX só registra o lead já qualificado
+// (mandou documentação). O lead digital de topo de funil vem do Atende Direito.
 const KPI_MAP = {
-  'Leads': 'leads',
   'Qualificados': 'qualificados',
   'Atendidos pela equipe': 'atendidos',
   'Contratos': 'contratos',
