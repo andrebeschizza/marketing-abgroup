@@ -12,8 +12,11 @@ function parseTiers(raw) {
 
 // KPIs sincronizados automaticamente (não permite edição manual)
 // Map: indicador → fonte (mostrado no badge da UI)
+// Nota: "Leads" foi REMOVIDO daqui. O ADVBOX só vê o lead depois que ele vira
+// qualificado (mandou documentação). O lead digital real (topo do funil) vem do
+// Atende Direito via webhook — enquanto o webhook não está ligado, "Leads" fica
+// editável manualmente pra André lançar o número do painel do Atende Direito.
 const AUTO_KPIS_SOURCE = {
-  'Leads': 'ADVBOX',
   'Qualificados': 'ADVBOX',
   'Atendidos pela equipe': 'ADVBOX',
   'Contratos': 'ADVBOX',
