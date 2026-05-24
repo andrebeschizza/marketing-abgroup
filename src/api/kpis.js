@@ -189,20 +189,35 @@ export async function getKpiHistorico(req, res) {
   }
 }
 
-// PATCH /api/kpis/:indicador — atualiza Realizado + Atualizado em
-// Body: { realizado: number }
+// PATCH /api/kpis/:indicador — atualiza Realizado e/ou Meta
+// Body: { realizado?: number, meta?: number }
+//   - meta: editável SEMPRE (é um alvo definido pela gestão, vale pra qualquer KPI)
+//   - realizado: bloqueado pra KPIs auto-sincronizados (vêm de fonte oficial)
 export async function updateKpi(req, res) {
   const indicador = decodeURIComponent(req.params.indicador || '').trim();
-  const { realizado } = req.body || {};
+  const body = req.body || {};
   if (!indicador) return res.status(400).json({ error: 'Indicador obrigatório' });
-  if (AUTO_KPIS.has(indicador)) {
-    return res.status(409).json({ error: `"${indicador}" é auto-sincronizado do ADVBOX — não pode ser editado manualmente.` });
+
+  const temRealizado = body.realizado !== undefined && body.realizado !== null && body.realizado !== '';
+  const temMeta = body.meta !== undefined && body.meta !== null && body.meta !== '';
+  if (!temRealizado && !temMeta) {
+    return res.status(400).json({ error: 'Informe "realizado" e/ou "meta"' });
   }
-  if (realizado === undefined || realizado === null || realizado === '') {
-    return res.status(400).json({ error: 'Campo "realizado" obrigatório' });
+
+  // Realizado de KPI auto-sincronizado não pode ser editado na mão (a Meta pode)
+  if (temRealizado && AUTO_KPIS.has(indicador)) {
+    return res.status(409).json({ error: `"${indicador}" tem o Realizado auto-sincronizado — só a Meta pode ser editada manualmente.` });
   }
-  const numRealizado = parseFloat(String(realizado).replace(',', '.'));
-  if (isNaN(numRealizado)) return res.status(400).json({ error: 'realizado deve ser número' });
+
+  let numRealizado, numMeta;
+  if (temRealizado) {
+    numRealizado = parseFloat(String(body.realizado).replace(',', '.'));
+    if (isNaN(numRealizado)) return res.status(400).json({ error: 'realizado deve ser número' });
+  }
+  if (temMeta) {
+    numMeta = parseFloat(String(body.meta).replace(',', '.'));
+    if (isNaN(numMeta) || numMeta < 0) return res.status(400).json({ error: 'meta deve ser número ≥ 0' });
+  }
 
   try {
     const rows = await readSheet('kpis');
@@ -213,14 +228,21 @@ export async function updateKpi(req, res) {
 
     const rowNum = target.__row;
     const now = new Date().toISOString();
-    // Atualiza só C (Realizado) e E (Atualizado em) — não toca em Meta, Unidade, Tiers
-    await updateRange('kpis', `C${rowNum}:C${rowNum}`, [[numRealizado]]);
-    await updateRange('kpis', `E${rowNum}:E${rowNum}`, [[now]]);
+    // Coluna B = Meta, C = Realizado, E = Atualizado em.
+    // "Atualizado em" só muda quando o Realizado muda (mantém o "última sync" coerente).
+    if (temMeta) {
+      await updateRange('kpis', `B${rowNum}:B${rowNum}`, [[numMeta]]);
+    }
+    if (temRealizado) {
+      await updateRange('kpis', `C${rowNum}:C${rowNum}`, [[numRealizado]]);
+      await updateRange('kpis', `E${rowNum}:E${rowNum}`, [[now]]);
+    }
 
     res.json({
       ok: true,
       indicador,
-      realizado: numRealizado,
+      ...(temRealizado ? { realizado: numRealizado } : {}),
+      ...(temMeta ? { meta: numMeta } : {}),
       atualizadoEm: now,
     });
   } catch (e) {
