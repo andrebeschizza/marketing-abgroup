@@ -62,6 +62,36 @@ async function calcVideosPublicados() {
   return count;
 }
 
+// Conta leads digitais registrados pelo webhook do Atende Direito no mês corrente.
+// Retorna null se a aba leads_log não existe ou está vazia (webhook ainda não ligado),
+// pra NÃO sobrescrever o valor lançado manualmente nesse período de transição.
+async function calcLeadsAtendeDireito() {
+  let rows;
+  try {
+    rows = await readSheet('leads_log');
+  } catch {
+    return null;
+  }
+  if (!rows || rows.length === 0) return null;
+  const { ano, mes } = mesAtual();
+  const dedup = new Set();
+  let count = 0;
+  for (const r of rows) {
+    const data = String(r['Data'] || '').slice(0, 10);
+    const m = data.match(/^(\d{4})-(\d{2})-/);
+    if (!m) continue;
+    if (parseInt(m[1], 10) !== ano) continue;
+    if (parseInt(m[2], 10) - 1 !== mes) continue;
+    const tid = String(r['TicketId'] || '').trim();
+    if (tid) {
+      if (dedup.has(tid)) continue; // dedupe por ticket (webhook pode reenviar)
+      dedup.add(tid);
+    }
+    count++;
+  }
+  return count;
+}
+
 // Lê o valor numérico de Realizado de um indicador
 function readRealizado(rows, indicador) {
   const row = rows.find(r => String(r['Indicador'] || '').trim() === indicador);
@@ -117,6 +147,13 @@ export async function runAutoCalc() {
   }
   if (inscritosGanhos !== null) {
     calculos.push({ indicador: 'Inscritos YouTube ganhos', valor: inscritosGanhos });
+  }
+
+  // Leads digitais — vêm do Atende Direito via webhook (aba leads_log).
+  // null = webhook ainda não ligado → não mexe no valor lançado manualmente.
+  const leadsAtende = await calcLeadsAtendeDireito().catch(() => null);
+  if (leadsAtende !== null) {
+    calculos.push({ indicador: 'Leads', valor: leadsAtende });
   }
 
   // Meta Ads — Investimento total do mês (só roda se token configurado)
