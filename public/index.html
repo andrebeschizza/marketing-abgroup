@@ -187,6 +187,21 @@
       margin-top: 4px;
     }
     .kpi-meta strong { color: var(--ink-2); font-weight: 600; }
+    .kpi-meta-edit {
+      cursor: pointer;
+      border-radius: 4px;
+      padding: 1px 4px;
+      margin: 0 -2px;
+      transition: background 0.15s;
+    }
+    .kpi-meta-edit:hover { background: var(--accent-soft); }
+    .kpi-meta-edit::after {
+      content: " ✎";
+      font-size: 9px;
+      opacity: 0;
+      transition: opacity 0.15s;
+    }
+    .kpi-meta-edit:hover::after { opacity: 0.65; }
     .kpi-bar {
       height: 4px; background: var(--bg-subtle);
       border-radius: 999px; overflow: hidden;
@@ -1840,11 +1855,11 @@
         deltaHtml = `<div class="kpi-delta ${cls}" title="Variação desde o início do mês (baseline ${formatNum(k.delta.baseline)})">${arrow} ${sign}${formatNum(v)} no mês</div>`;
       }
       return `
-        <div class="kpi ${k.status}${k.auto ? ' kpi-auto' : ''}" data-indicador="${escapeHtml(k.indicador)}" data-realizado="${k.realizado}" data-unidade="${escapeHtml(k.unidade || '')}" data-auto="${k.auto ? '1' : '0'}">
+        <div class="kpi ${k.status}${k.auto ? ' kpi-auto' : ''}" data-indicador="${escapeHtml(k.indicador)}" data-realizado="${k.realizado}" data-meta="${k.meta}" data-unidade="${escapeHtml(k.unidade || '')}" data-auto="${k.auto ? '1' : '0'}">
           ${editBtn}
           <div class="kpi-label">${escapeHtml(k.indicador)}</div>
           <div class="kpi-value">${formatNum(k.realizado)}${k.unidade ? '<span style="font-size:13px;color:var(--ink-mute);"> ' + escapeHtml(k.unidade) + '</span>' : ''}</div>
-          <div class="kpi-meta">Meta <strong>${formatNum(k.meta)}</strong> · ${k.pct}%</div>
+          <div class="kpi-meta"><span class="kpi-meta-edit" title="Clique para alterar a meta">Meta <strong>${formatNum(k.meta)}</strong></span> · ${k.pct}%</div>
           <div class="kpi-bar"><div class="kpi-fill" style="width:${barW}%"></div></div>
           ${deltaHtml}${proximoTier}${atualizado}
         </div>
@@ -1946,7 +1961,36 @@
       }
       return;
     }
-    // Click no card (não no lápis) → abre histórico
+    // Click no "Meta" → altera a meta. Vale pra TODOS os KPIs (inclusive os auto).
+    const metaEl = e.target.closest('.kpi-meta-edit');
+    if (metaEl) {
+      e.stopPropagation();
+      const card = metaEl.closest('.kpi');
+      const indicador = card.dataset.indicador;
+      const metaAtual = card.dataset.meta;
+      const unidade = card.dataset.unidade || '';
+      const novo = window.prompt(
+        `Alterar a META de "${indicador}"\n\nMeta atual: ${metaAtual} ${unidade}\nNova meta:`,
+        metaAtual
+      );
+      if (novo === null) return;
+      const num = parseFloat(String(novo).replace(',', '.'));
+      if (isNaN(num) || num < 0) { alert('Meta inválida — precisa ser um número maior ou igual a 0.'); return; }
+      try {
+        const r = await fetch(`/api/kpis/${encodeURIComponent(indicador)}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ meta: num }),
+        });
+        const j = await r.json().catch(() => ({}));
+        if (!r.ok || !j.ok) throw new Error(j.error || ('HTTP ' + r.status));
+        await loadKpis();
+      } catch (err) {
+        alert('Erro ao alterar a meta: ' + err.message);
+      }
+      return;
+    }
+    // Click no card (não no lápis nem na meta) → abre histórico
     const card = e.target.closest('.kpi');
     if (card) openKpiHistorico(card.dataset.indicador, card.dataset.unidade);
   });
