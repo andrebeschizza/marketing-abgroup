@@ -190,18 +190,19 @@
     .kpi-meta-edit {
       cursor: pointer;
       border-radius: 4px;
-      padding: 1px 4px;
+      padding: 1px 5px;
       margin: 0 -2px;
+      background: var(--bg-subtle);
       transition: background 0.15s;
     }
     .kpi-meta-edit:hover { background: var(--accent-soft); }
     .kpi-meta-edit::after {
       content: " ✎";
       font-size: 9px;
-      opacity: 0;
+      opacity: 0.6;
       transition: opacity 0.15s;
     }
-    .kpi-meta-edit:hover::after { opacity: 0.65; }
+    .kpi-meta-edit:hover::after { opacity: 1; }
     .kpi-bar {
       height: 4px; background: var(--bg-subtle);
       border-radius: 999px; overflow: hidden;
