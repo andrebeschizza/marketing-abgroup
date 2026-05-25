@@ -9,6 +9,7 @@ import { countPostsBlogDoMes } from '../lib/blog-rss.js';
 import { inscritosGanhosDoMes, getSubscriberCount } from '../lib/youtube.js';
 import { spendDoMesAtual } from '../lib/meta-ads.js';
 import { countLeadsUltimosDias } from '../lib/advbox.js';
+import { countLeadsAtendeMesAtual } from '../lib/atende-direito.js';
 
 // Snapshot do total ATUAL de inscritos no YouTube (gravado na aba kpis_historico).
 // Permite calcular GANHO mensal: total_atual - menor_snapshot_do_mes.
@@ -62,34 +63,13 @@ async function calcVideosPublicados() {
   return count;
 }
 
-// Conta leads digitais registrados pelo webhook do Atende Direito no mês corrente.
-// Retorna null se a aba leads_log não existe ou está vazia (webhook ainda não ligado),
-// pra NÃO sobrescrever o valor lançado manualmente nesse período de transição.
+// Leads digitais — contagem REAL vinda da API do Atende Direito.
+// Soma os cards criados no mês nos boards de funil (Pipeline de Leads + AposentaBR).
+// Retorna null se o token não está configurado (env ATENDE_API_TOKEN) →
+// NÃO sobrescreve o valor manual nesse período de transição.
 async function calcLeadsAtendeDireito() {
-  let rows;
-  try {
-    rows = await readSheet('leads_log');
-  } catch {
-    return null;
-  }
-  if (!rows || rows.length === 0) return null;
-  const { ano, mes } = mesAtual();
-  const dedup = new Set();
-  let count = 0;
-  for (const r of rows) {
-    const data = String(r['Data'] || '').slice(0, 10);
-    const m = data.match(/^(\d{4})-(\d{2})-/);
-    if (!m) continue;
-    if (parseInt(m[1], 10) !== ano) continue;
-    if (parseInt(m[2], 10) - 1 !== mes) continue;
-    const tid = String(r['TicketId'] || '').trim();
-    if (tid) {
-      if (dedup.has(tid)) continue; // dedupe por ticket (webhook pode reenviar)
-      dedup.add(tid);
-    }
-    count++;
-  }
-  return count;
+  if (!process.env.ATENDE_API_TOKEN) return null;
+  return await countLeadsAtendeMesAtual();
 }
 
 // Lê o valor numérico de Realizado de um indicador
