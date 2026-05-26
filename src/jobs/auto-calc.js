@@ -1,29 +1,38 @@
-// KPIs auto-calculados a partir de dados que JÁ existem no Sheet.
-// Não depende de API externa. Roda após o sync ADVBOX (precisa de Leads+Contratos atualizados).
+// KPIs auto-calculados a partir de dados que JÁ existem no Sheet + APIs externas
+// quando o token correspondente está configurado (ADVBOX, Atende Direito, YouTube,
+// Meta Ads). Roda a cada ~4h via cron interno (server.js).
 //
-// KPIs cobertos:
-//   - "Vídeos publicados" = count de cards do calendário com Status="Publicado" e Data Publicação no mês corrente
-//   - "Conversão Lead→Contrato" = (Contratos / Leads) × 100, arredondado pra inteiro
+// KPIs cobertos automaticamente:
+//   - "Leads ABADV" (Pipeline de Leads, board 2941) e "Leads AposentaBR" (board 2631)
+//     → vêm da API do Atende Direito (cards criados no mês). Separados por marca.
+//   - "Vídeos publicados" = cards do calendário com Status="Publicado" no mês.
+//   - "Conversão Lead→Contrato" = contratos / leads (janela 60d via ADVBOX).
+//   - "Notícias publicadas no blog" (RSS), "Inscritos YouTube ganhos" (YouTube API),
+//     "Investimento Ads total" + "CPL" (Meta Ads).
 import { readSheet, updateRange, appendRow, listTabs, createTab } from '../lib/sheets.js';
 import { countPostsBlogDoMes } from '../lib/blog-rss.js';
 import { inscritosGanhosDoMes, getSubscriberCount } from '../lib/youtube.js';
 import { spendDoMesAtual } from '../lib/meta-ads.js';
 import { countLeadsUltimosDias } from '../lib/advbox.js';
-import { countLeadsAtendeMesAtual } from '../lib/atende-direito.js';
+import { countCreatesNoBoard, mesAtualUnix } from '../lib/atende-direito.js';
 
 // Snapshot do total ATUAL de inscritos no YouTube (gravado na aba kpis_historico).
-// Permite calcular GANHO mensal: total_atual - menor_snapshot_do_mes.
 const YT_INDICADOR_SNAPSHOT = '_YouTube Total';
 
+// Boards do Atende Direito que viram indicadores "Leads <Marca>" separados.
+// Cada board é o funil de uma marca; SAC fica de fora (não é lead de marketing).
+const ATENDE_BRAND_BOARDS = [
+  { indicador: 'Leads ABADV',      listId: 2941, metaPadrao: 2500, unidade: 'leads' },
+  { indicador: 'Leads AposentaBR', listId: 2631, metaPadrao: 200,  unidade: 'leads' },
+];
+
 async function snapshotYoutubeTotal() {
-  // Garante aba kpis_historico (Sprint 7 já cria, mas paranoia)
   const tabs = await listTabs();
   if (!tabs.includes('kpis_historico')) {
     await createTab('kpis_historico', ['Data', 'Indicador', 'Realizado', 'Meta', 'Pct']);
   }
   const hoje = new Date().toISOString().slice(0, 10);
   const rows = await readSheet('kpis_historico');
-  // Idempotente por dia
   const ja = rows.some(r => String(r['Data'] || '').startsWith(hoje) && String(r['Indicador'] || '') === YT_INDICADOR_SNAPSHOT);
   if (ja) return null;
   const { subscribers } = await getSubscriberCount();
@@ -41,11 +50,10 @@ function mesAtual() {
   const hoje = new Date();
   return {
     ano: hoje.getFullYear(),
-    mes: hoje.getMonth(), // 0-indexed
+    mes: hoje.getMonth(),
   };
 }
 
-// Conta cards do calendário publicados no mês corrente
 async function calcVideosPublicados() {
   const cards = await readSheet('calendario').catch(() => []);
   const { ano, mes } = mesAtual();
@@ -53,7 +61,7 @@ async function calcVideosPublicados() {
   for (const c of cards) {
     if (!c['Título']) continue;
     if (String(c['Status'] || '').trim() !== 'Publicado') continue;
-    const dataPub = String(c['Data Publicação'] || '').slice(0, 10); // YYYY-MM-DD
+    const dataPub = String(c['Data Publicação'] || '').slice(0, 10);
     const m = dataPub.match(/^(\d{4})-(\d{2})-/);
     if (!m) continue;
     if (parseInt(m[1], 10) !== ano) continue;
@@ -63,16 +71,19 @@ async function calcVideosPublicados() {
   return count;
 }
 
-// Leads digitais — contagem REAL vinda da API do Atende Direito.
-// Soma os cards criados no mês nos boards de funil (Pipeline de Leads + AposentaBR).
-// Retorna null se o token não está configurado (env ATENDE_API_TOKEN) →
-// NÃO sobrescreve o valor manual nesse período de transição.
-async function calcLeadsAtendeDireito() {
+// Conta leads do mês por marca via API do Atende Direito.
+// Retorna array [{indicador, valor, metaPadrao, unidade}] ou null se token ausente.
+async function calcLeadsPorMarcaAtende() {
   if (!process.env.ATENDE_API_TOKEN) return null;
-  return await countLeadsAtendeMesAtual();
+  const { start, end } = mesAtualUnix();
+  const out = [];
+  for (const { indicador, listId, metaPadrao, unidade } of ATENDE_BRAND_BOARDS) {
+    const valor = await countCreatesNoBoard(listId, start, end);
+    out.push({ indicador, valor, metaPadrao, unidade });
+  }
+  return out;
 }
 
-// Lê o valor numérico de Realizado de um indicador
 function readRealizado(rows, indicador) {
   const row = rows.find(r => String(r['Indicador'] || '').trim() === indicador);
   if (!row) return null;
@@ -80,34 +91,53 @@ function readRealizado(rows, indicador) {
   return isNaN(n) ? 0 : n;
 }
 
-// Calcula conversão Lead→Contrato por JANELA de 60 dias.
-// Contratos fechados no mês ÷ Leads que entraram nos últimos 60 dias.
-// Janela maior no denominador reflete o ciclo real de venda (lead leva ~45-60d pra fechar),
-// evitando estouro absurdo (ex: 343% da meta) que acontece com Leads-do-mês.
+// Soma de leads de marketing (ABADV + AposentaBR) — usado como fallback de
+// denominador na Conversão e no CPL quando ADVBOX/Meta não dão.
+// Inclui a linha "Leads" legada até a migração rodar.
+function readLeadsTotal(rows) {
+  const abadv = readRealizado(rows, 'Leads ABADV') || 0;
+  const ap = readRealizado(rows, 'Leads AposentaBR') || 0;
+  const legacy = readRealizado(rows, 'Leads') || 0;
+  return abadv + ap + legacy;
+}
+
 async function calcConversao(rows) {
   const contratos = readRealizado(rows, 'Contratos');
   let leadsJanela = 0;
   if (process.env.ADVBOX_TOKEN) {
     leadsJanela = await countLeadsUltimosDias(60).catch(() => 0);
   }
-  // Fallback: se não tem ADVBOX, usa Leads do mês do Sheet
-  if (!leadsJanela) leadsJanela = readRealizado(rows, 'Leads');
+  if (!leadsJanela) leadsJanela = readLeadsTotal(rows);
   if (!leadsJanela || leadsJanela === 0) return 0;
   return Math.round((contratos / leadsJanela) * 100);
 }
 
+// Migração one-shot e idempotente: se a linha "Leads" antiga ainda existe na aba
+// kpis e ainda não temos "Leads ABADV", renomeia o Indicador da linha pra "Leads
+// ABADV" (preservando meta, realizado, unidade e tudo mais). Mutates `rows`.
+async function migrateLeadsToAbadv(rows) {
+  const temNovo = rows.some(r => String(r['Indicador'] || '').trim() === 'Leads ABADV');
+  const legacy = rows.find(r => String(r['Indicador'] || '').trim() === 'Leads');
+  if (temNovo || !legacy) return false;
+  await updateRange('kpis', `A${legacy.__row}:A${legacy.__row}`, [['Leads ABADV']]);
+  legacy['Indicador'] = 'Leads ABADV';
+  return true;
+}
+
 export async function runAutoCalc() {
-  const rows = await readSheet('kpis');
+  let rows = await readSheet('kpis');
   const now = new Date().toISOString();
   const updates = [];
   const erros = [];
 
+  // Migração leve: "Leads" → "Leads ABADV" (idempotente)
+  await migrateLeadsToAbadv(rows).catch(e => console.error('[migrate-leads] erro:', e.message));
+
   const noticias = await countPostsBlogDoMes().catch(e => { console.error('[blog-rss] erro:', e.message); return null; });
 
-  // YouTube: snapshot do total atual + cálculo de ganho do mês
   let inscritosGanhos = null;
   try {
-    await snapshotYoutubeTotal(); // idempotente por dia
+    await snapshotYoutubeTotal();
     const historico = await readSheet('kpis_historico');
     const ytData = await inscritosGanhosDoMes(
       historico.filter(r => String(r['Indicador'] || '') === YT_INDICADOR_SNAPSHOT)
@@ -129,14 +159,14 @@ export async function runAutoCalc() {
     calculos.push({ indicador: 'Inscritos YouTube ganhos', valor: inscritosGanhos });
   }
 
-  // Leads digitais — vêm do Atende Direito via webhook (aba leads_log).
-  // null = webhook ainda não ligado → não mexe no valor lançado manualmente.
-  const leadsAtende = await calcLeadsAtendeDireito().catch(() => null);
-  if (leadsAtende !== null) {
-    calculos.push({ indicador: 'Leads', valor: leadsAtende });
+  // Leads por marca via Atende Direito → "Leads ABADV" + "Leads AposentaBR"
+  const leadsPorMarca = await calcLeadsPorMarcaAtende().catch(e => {
+    console.error('[atende-direito] erro:', e.message); return null;
+  });
+  if (leadsPorMarca) {
+    for (const x of leadsPorMarca) calculos.push(x);
   }
 
-  // Meta Ads — Investimento total do mês (só roda se token configurado)
   let metaSpend = null;
   if (process.env.META_ACCESS_TOKEN && process.env.META_AD_ACCOUNT_ID) {
     try {
@@ -147,19 +177,32 @@ export async function runAutoCalc() {
     }
   }
 
-  // CPL auto-calc: requer leads (do ADVBOX, já no Sheet) + spend (Meta)
   if (metaSpend !== null) {
-    const leads = readRealizado(rows, 'Leads');
+    const leads = readLeadsTotal(rows);
     if (leads > 0) {
       const cpl = Math.round((metaSpend / leads) * 100) / 100;
       calculos.push({ indicador: 'CPL', valor: cpl });
     }
   }
 
-  for (const { indicador, valor } of calculos) {
+  for (const { indicador, valor, metaPadrao, unidade } of calculos) {
     const row = rows.find(r => String(r['Indicador'] || '').trim() === indicador);
     if (!row) {
-      erros.push({ indicador, motivo: 'indicador não encontrado na aba kpis' });
+      // Auto-cria a linha (ex.: "Leads AposentaBR" na primeira vez que aparece)
+      try {
+        await appendRow('kpis', {
+          'Indicador': indicador,
+          'Meta': metaPadrao || 0,
+          'Realizado': valor,
+          'Unidade': unidade || '',
+          'Atualizado em': now,
+          'Tiers': '',
+        });
+        updates.push({ indicador, novoRealizado: valor, criado: true });
+        rows = await readSheet('kpis'); // recarrega pra próximas iterações
+      } catch (e) {
+        erros.push({ indicador, motivo: 'falha ao criar linha: ' + e.message });
+      }
       continue;
     }
     await updateRange('kpis', `C${row.__row}:C${row.__row}`, [[valor]]);
