@@ -11,7 +11,8 @@ Tudo que o André falar/decidir/pedir nas conversas deve ser **registrado em DOI
 > Captura tudo que for substantivo (decisão, tarefa, fato, pauta, insight, contato, compromisso). Use bom senso para conversa trivial, mas o padrão é **não perder nada**.
 
 ## Contexto rápido
-- Agendas: `andre@andrebeschizza.com` (trabalho) · `beschizzalopes@gmail.com` (pessoal/rotina). Fuso America/Bahia.
+- **Calendário único: criar TODOS os eventos novos (trabalho E pessoal) em `andre@andrebeschizza.com`.** Fuso America/Bahia.
+  - `beschizzalopes@gmail.com` guarda só a rotina/protocolos ANTIGOS já existentes (não migrar sem pedido explícito; ver os dois juntos basta). Alterações em eventos que já estão lá continuam nesse calendário.
 - Estilo do André: direto, objetivo, português; "aja e execute"; "sem inventar" (só dado oficial com fonte/ano).
 - Guardrails: OAB (sem captação/promessa de êxito) e LGPD (dado sensível de saúde).
 
